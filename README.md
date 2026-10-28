@@ -85,7 +85,7 @@ Then open <http://localhost:47823>. On Windows the command is usually `python` r
 - A live preview of the per-domain split, with a warning when a domain doesn't have enough questions.
 - Question selection: *Prefer unseen*, *Focus on missed* or *Random*.
 - Question order: shuffled, or grouped by domain.
-- Shuffle answer choices: rearranges each question's options every time a test starts (including retakes). The correct answer and the "why it's wrong" notes follow their option text. Avoid it for banks whose options refer to each other by letter or position (e.g. "Both A and B", "All of the above").
+- Shuffle answer choices (on by default): rearranges each question's options every time a test starts (including retakes). The correct answer and the "why it's wrong" notes follow their option text. Avoid it for banks whose options refer to each other by letter or position (e.g. "Both A and B", "All of the above").
 - Bank statistics: question and batch counts, plus each domain's share of the bank against its exam weight.
 
 **Test modes**
