@@ -10,6 +10,7 @@ import shutil
 import tempfile
 import threading
 import unittest
+from unittest import mock
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -283,15 +284,26 @@ class WriteApiTest(unittest.TestCase):
                 body = b'{"files": [{"path": "samples/nan.json", "data": {"w": ' + constant + b"}}]}"
                 self.assertRejected(self.post(body=body), ["samples/nan.json"])
 
-    def test_rejects_data_too_deep_to_write(self):
-        # Parses, but is too deeply nested to write back out; the first file must not be written either.
-        depth = 5000
-        deep = b"[" * depth + b"]" * depth
-        body = b'{"files": [{"path": "samples/ok.json", "data": 1}, {"path": "samples/deep.json", "data": ' + deep + b"}]}"
-        status = self.post(body=body)[0]
-        self.assertEqual(status, 400)
-        self.assertFalse(os.path.exists(self.path("samples/ok.json")))
-        self.assertFalse(os.path.exists(self.path("samples/deep.json")))
+    def test_nothing_is_written_when_a_later_file_cannot_be_serialised(self):
+        # How deep a structure json can write depends on the Python version, so
+        # make the second file fail directly: the first must not be written either.
+        to_text = server.to_text
+
+        def failing_to_text(rel, data):
+            if rel == "samples/deep.json":
+                raise server.Reject(400, f"Can't be written as JSON: {rel}")
+            return to_text(rel, data)
+
+        files = [{"path": "samples/ok.json", "data": 1}, {"path": "samples/deep.json", "data": 2}]
+        with mock.patch.object(server, "to_text", side_effect=failing_to_text) as patched:
+            self.assertRejected(self.post(files), ["samples/ok.json", "samples/deep.json"])
+        self.assertEqual([c.args[0] for c in patched.call_args_list], ["samples/ok.json", "samples/deep.json"])
+
+    def test_to_text_rejects_data_json_cannot_write(self):
+        for error in [RecursionError("too deep"), ValueError("circular")]:
+            with self.subTest(error=type(error).__name__), mock.patch.object(server.json, "dumps", side_effect=error):
+                with self.assertRaises(server.Reject):
+                    server.to_text("samples/x.json", [1])
 
     def test_rejects_the_same_file_twice(self):
         files = [{"path": "samples/twice.json", "data": 1}, {"path": "samples/twice.json", "data": 2}]
