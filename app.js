@@ -19,6 +19,7 @@ const DEFAULT_SETTINGS = {
   allowSkip: true,
   feedback: 'immediate',  // immediate | end
   order: 'shuffle',       // shuffle | grouped
+  shuffleOptions: false,
 };
 
 /* ---------- Storage (never throws; app works without it) ---------- */
@@ -67,6 +68,22 @@ function shuffle(arr) {
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
+}
+
+// Returns a copy of the question with its option texts moved to random letters.
+// The letters themselves stay in place; the answer and distractors follow their text.
+function shuffleOptions(q) {
+  const base = q.source || q;
+  const order = shuffle(base.letters);
+  const toNew = Object.fromEntries(order.map((orig, i) => [orig, base.letters[i]]));
+  const remap = (obj) => Object.fromEntries(Object.entries(obj).map(([k, v]) => [toNew[k] ?? k, v]));
+  return {
+    ...base,
+    options: remap(base.options),
+    answer: toNew[base.answer],
+    distractors: remap(base.distractors),
+    source: base,
+  };
 }
 
 function groupBy(arr, fn) {
@@ -488,6 +505,10 @@ function renderSetup() {
             ${radio('order', 'grouped', 'Grouped by domain', s.order)}
           </div>
         </div>
+        <div>
+          <label class="switch"><input type="checkbox" id="shuffle-options" ${s.shuffleOptions ? 'checked' : ''}><span class="track"></span>Shuffle answer choices</label>
+          <div class="field-help">Rearranges each question's options so you can't memorise answers by letter.</div>
+        </div>
       </div>
     </section>
 
@@ -570,6 +591,7 @@ function bindSetup() {
   }));
 
   $('#allow-skip').addEventListener('change', (e) => { s.allowSkip = e.target.checked; commit(); });
+  $('#shuffle-options').addEventListener('change', (e) => { s.shuffleOptions = e.target.checked; commit(); });
   $('#priority').addEventListener('change', (e) => { s.priority = e.target.value; commit(); });
 
   $('#reset-history').addEventListener('click', () => {
@@ -605,8 +627,10 @@ function bindSetup() {
 function startTest(questions) {
   if (!questions.length) return;
   const n = questions.length;
+  const shuffled = state.settings.shuffleOptions;
   state.test = {
-    questions,
+    questions: questions.map((q) => (shuffled ? shuffleOptions(q) : q.source || q)),
+    shuffleOptions: shuffled,
     answers: Array(n).fill(null),
     locked: Array(n).fill(false),
     visited: Array(n).fill(false),
@@ -838,7 +862,7 @@ function renderResults() {
         <div class="score-big ${score >= 70 ? 'pass' : 'fail'}">${score}%</div>
         <div>
           <div><b>${correct}</b> of <b>${n}</b> correct${skipped ? ` · ${skipped} unanswered` : ''}</div>
-          <div class="muted">Time ${formatDuration(t.endedAt - t.startedAt)} · ${t.feedback === 'immediate' ? 'Immediate feedback' : 'Feedback at end'} · ${t.allowSkip ? 'Skipping allowed' : 'No skipping'}</div>
+          <div class="muted">Time ${formatDuration(t.endedAt - t.startedAt)} · ${t.feedback === 'immediate' ? 'Immediate feedback' : 'Feedback at end'} · ${t.allowSkip ? 'Skipping allowed' : 'No skipping'}${t.shuffleOptions ? ' · Choices shuffled' : ''}</div>
         </div>
       </div>
       <div class="row" style="margin-top:1.1rem">
