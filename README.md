@@ -23,6 +23,7 @@ A local, browser-based multiple-choice practice test generator. It builds tests 
 - [Data storage and privacy](#data-storage-and-privacy)
 - [Keeping private question banks out of git](#keeping-private-question-banks-out-of-git)
 - [Troubleshooting](#troubleshooting)
+- [License](#license)
 
 ---
 
@@ -306,3 +307,11 @@ If your files have to live somewhere else (for example, because a generator writ
 | "Heads up" warnings on the setup screen | A batch failed to load (missing file or invalid JSON), or questions were skipped, duplicated or had an unknown domain. The message names the file. |
 | A domain shows as short | The bank has fewer questions in that domain than its weight calls for. The app fills the gap from other domains; add more questions for that domain to fix it. |
 | Settings or history seem lost | You're probably on a different port or browser profile, or site data was cleared. See [Data storage](#data-storage-and-privacy). |
+
+---
+
+## License
+
+Copyright 2026 Brandon Carp. Licensed under the [Apache License, Version 2.0](LICENSE); see [NOTICE](NOTICE).
+
+This covers the app code and the sample question bank in `samples/`. Question banks you add yourself, including any in `private/` or registered in `exams.local.json`, are not part of this repository and aren't covered by its license.
