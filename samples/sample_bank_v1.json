@@ -1,0 +1,212 @@
+[
+  {
+    "id": "SAMPLE-D1-001",
+    "domain": "Domain 1: Networking",
+    "subtopic": "OSI Model",
+    "scenario_stem": "A network engineer is troubleshooting why packets from one office subnet never reach a server in another subnet, even though devices within each subnet communicate normally. At which OSI layer does the function of forwarding packets between networks operate?",
+    "options": {
+      "A": "Layer 2 (Data Link)",
+      "B": "Layer 3 (Network)",
+      "C": "Layer 4 (Transport)",
+      "D": "Layer 5 (Session)"
+    },
+    "correct_option": "B",
+    "explanation": {
+      "correct": "The Network layer (Layer 3) handles logical addressing (IP) and routing, which moves packets between different networks or subnets.",
+      "distractors": {
+        "A": "The Data Link layer handles delivery within a single network segment using MAC addresses; it does not route between networks.",
+        "C": "The Transport layer provides end-to-end delivery between processes (ports, segmentation, reliability), not path selection between networks.",
+        "D": "The Session layer manages dialogues between applications and has no role in forwarding packets."
+      }
+    }
+  },
+  {
+    "id": "SAMPLE-D1-002",
+    "domain": "Domain 1: Networking",
+    "subtopic": "TCP vs UDP",
+    "scenario_stem": "A team is building a live video-streaming service where low latency matters more than retransmitting occasional lost packets. Which transport protocol characteristic makes UDP the better fit?",
+    "options": {
+      "A": "It guarantees in-order delivery of every packet.",
+      "B": "It performs a three-way handshake before sending data.",
+      "C": "It is connectionless and does not retransmit lost datagrams.",
+      "D": "It provides built-in congestion control and flow control."
+    },
+    "correct_option": "C",
+    "explanation": {
+      "correct": "UDP is connectionless and has no retransmission, so a lost packet doesn't stall the stream while it is resent. That keeps latency low for real-time media.",
+      "distractors": {
+        "A": "Guaranteed in-order delivery is a TCP feature, and the waiting it causes is exactly what live streaming wants to avoid.",
+        "B": "The three-way handshake (SYN, SYN-ACK, ACK) is how TCP establishes a connection; UDP has no handshake.",
+        "D": "Congestion and flow control are TCP features; UDP leaves these to the application."
+      }
+    }
+  },
+  {
+    "id": "SAMPLE-D1-003",
+    "domain": "Domain 1: Networking",
+    "subtopic": "DNS Record Types",
+    "scenario_stem": "An administrator is enabling IPv6 for a public website and needs DNS to resolve the hostname to the server's new IPv6 address. Which DNS record type should be created?",
+    "options": {
+      "A": "AAAA",
+      "B": "A",
+      "C": "CNAME",
+      "D": "MX"
+    },
+    "correct_option": "A",
+    "explanation": {
+      "correct": "An AAAA (quad-A) record maps a hostname to a 128-bit IPv6 address.",
+      "distractors": {
+        "B": "An A record maps a hostname to a 32-bit IPv4 address, not IPv6.",
+        "C": "A CNAME creates an alias from one hostname to another; it does not hold an IP address.",
+        "D": "An MX record identifies the mail servers for a domain."
+      }
+    }
+  },
+  {
+    "id": "SAMPLE-D2-001",
+    "domain": "Domain 2: Security",
+    "subtopic": "Hashing vs Encryption",
+    "scenario_stem": "A developer is designing how user passwords are stored. The system should be able to verify a password at login, but nobody, including administrators, should be able to recover the original password from the database. Which approach fits?",
+    "options": {
+      "A": "Encrypt passwords with AES and store the key on the same server.",
+      "B": "Encode passwords with Base64 before storing them.",
+      "C": "Encrypt passwords with the server's RSA public key.",
+      "D": "Store a salted hash produced by a slow password-hashing function such as bcrypt or Argon2."
+    },
+    "correct_option": "D",
+    "explanation": {
+      "correct": "Hashing is one-way. Login works by hashing the submitted password and comparing it to the stored hash. A per-user salt defeats precomputed tables, and a deliberately slow algorithm makes brute-force attacks expensive.",
+      "distractors": {
+        "A": "Encryption is reversible. Anyone who gets the key, which here sits on the same server, can decrypt every password.",
+        "B": "Base64 is an encoding, not a security control; it is trivially reversible.",
+        "C": "RSA encryption is reversible by whoever holds the private key, so the passwords remain recoverable."
+      }
+    }
+  },
+  {
+    "id": "SAMPLE-D2-002",
+    "domain": "Domain 2: Security",
+    "subtopic": "Least Privilege",
+    "scenario_stem": "A reporting service only needs to read sales data from a database. Its current account has full administrative rights. Which change best applies the principle of least privilege?",
+    "options": {
+      "A": "Keep the admin account but rotate its password monthly.",
+      "B": "Create a dedicated account with read-only access to the sales tables only.",
+      "C": "Move the reporting service to a separate network segment.",
+      "D": "Enable verbose audit logging for the admin account."
+    },
+    "correct_option": "B",
+    "explanation": {
+      "correct": "Least privilege means granting only the permissions a task requires. A dedicated read-only account scoped to the sales tables limits the damage if the service is compromised.",
+      "distractors": {
+        "A": "Password rotation doesn't reduce the excessive permissions; a compromise still yields full admin rights.",
+        "C": "Network segmentation is useful defense in depth but does not change what the account is allowed to do.",
+        "D": "Logging helps detect misuse after the fact but doesn't restrict the account's privileges."
+      }
+    }
+  },
+  {
+    "id": "SAMPLE-D2-003",
+    "domain": "Domain 2: Security",
+    "subtopic": "Well-Known Ports",
+    "scenario_stem": "A firewall rule must allow inbound encrypted web traffic (HTTPS) to a public web server while blocking everything else. Which TCP port should be opened by default?",
+    "options": {
+      "A": "80",
+      "B": "22",
+      "C": "443",
+      "D": "3389"
+    },
+    "correct_option": "C",
+    "explanation": {
+      "correct": "HTTPS (HTTP over TLS) uses TCP port 443 by default.",
+      "distractors": {
+        "A": "Port 80 is the default for unencrypted HTTP.",
+        "B": "Port 22 is used by SSH for remote shell access.",
+        "D": "Port 3389 is used by Microsoft Remote Desktop Protocol (RDP)."
+      }
+    }
+  },
+  {
+    "id": "SAMPLE-D3-001",
+    "domain": "Domain 3: Programming",
+    "subtopic": "Algorithmic Complexity",
+    "scenario_stem": "A function searches for a value in a sorted array of one million elements by repeatedly checking the middle element and discarding the half that cannot contain the target. What is the time complexity of this approach?",
+    "options": {
+      "A": "O(1)",
+      "B": "O(log n)",
+      "C": "O(n)",
+      "D": "O(n log n)"
+    },
+    "correct_option": "B",
+    "explanation": {
+      "correct": "This is binary search. Halving the search space each step means about log2(n) comparisons, roughly 20 for a million elements.",
+      "distractors": {
+        "A": "O(1) is constant time, such as indexing directly into an array by position; searching for a value cannot be done that way here.",
+        "C": "O(n) is a linear scan that checks each element in turn, which binary search avoids.",
+        "D": "O(n log n) is typical of efficient comparison sorts like merge sort, not of searching an already sorted array."
+      }
+    }
+  },
+  {
+    "id": "SAMPLE-D3-002",
+    "domain": "Domain 3: Programming",
+    "subtopic": "Data Structures",
+    "scenario_stem": "A text editor implements 'undo' so the most recent change is always reversed first. Which data structure naturally models this behaviour?",
+    "options": {
+      "A": "Queue",
+      "B": "Binary search tree",
+      "C": "Hash table",
+      "D": "Stack"
+    },
+    "correct_option": "D",
+    "explanation": {
+      "correct": "A stack is last-in, first-out (LIFO): each edit is pushed, and undo pops the most recent one.",
+      "distractors": {
+        "A": "A queue is first-in, first-out (FIFO), which would undo the oldest change first.",
+        "B": "A binary search tree keeps items sorted by key, not by the order they were added.",
+        "C": "A hash table offers fast lookup by key but keeps no notion of recency."
+      }
+    }
+  },
+  {
+    "id": "SAMPLE-D4-001",
+    "domain": "Domain 4: Databases",
+    "subtopic": "Keys and Constraints",
+    "scenario_stem": "A database designer is choosing a primary key for a Customers table. Which pair of properties must every primary key column (or combination of columns) satisfy?",
+    "options": {
+      "A": "Unique and not null",
+      "B": "Indexed and auto-incrementing",
+      "C": "Numeric and sequential",
+      "D": "Referenced by at least one foreign key"
+    },
+    "correct_option": "A",
+    "explanation": {
+      "correct": "A primary key must uniquely identify each row and can never be null.",
+      "distractors": {
+        "B": "Most databases index primary keys automatically, but auto-incrementing is optional; natural keys and UUIDs are also valid.",
+        "C": "Primary keys can be text, UUIDs, or composite values; they don't have to be numeric or sequential.",
+        "D": "A primary key is valid whether or not any foreign key references it."
+      }
+    }
+  },
+  {
+    "id": "SAMPLE-D4-002",
+    "domain": "Domain 4: Databases",
+    "subtopic": "SQL Injection",
+    "scenario_stem": "A login form builds its query by concatenating user input directly into a SQL string. A tester enters ' OR '1'='1 as the username and logs in without a password. What is the most effective fix?",
+    "options": {
+      "A": "Strip single quotes from all user input.",
+      "B": "Hide database error messages from users.",
+      "C": "Use parameterized queries (prepared statements) so input is always treated as data.",
+      "D": "Limit the username field to 20 characters."
+    },
+    "correct_option": "C",
+    "explanation": {
+      "correct": "Parameterized queries send the SQL structure and the user values separately, so input can never change the meaning of the query.",
+      "distractors": {
+        "A": "Blacklisting characters is fragile; encodings and other injection techniques can bypass it, and it breaks legitimate input such as O'Brien.",
+        "B": "Hiding errors makes attacks harder to tune but doesn't fix the underlying injection flaw.",
+        "D": "Short payloads such as ' OR 1=1-- still fit within length limits."
+      }
+    }
+  }
+]

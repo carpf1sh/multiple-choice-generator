@@ -1,0 +1,46 @@
+{
+  "manifest_version": "1.0",
+  "total_questions": 20,
+  "batches": [
+    {
+      "batch_id": "v1",
+      "file_name": "sample_bank_v1.json",
+      "item_count": 10,
+      "covered_subtopics": [
+        "Domain 1: OSI Model",
+        "Domain 1: TCP vs UDP",
+        "Domain 1: DNS Record Types",
+        "Domain 2: Hashing vs Encryption",
+        "Domain 2: Least Privilege",
+        "Domain 2: Well-Known Ports",
+        "Domain 3: Algorithmic Complexity",
+        "Domain 3: Data Structures",
+        "Domain 4: Keys and Constraints",
+        "Domain 4: SQL Injection"
+      ]
+    },
+    {
+      "batch_id": "v2",
+      "file_name": "sample_bank_v2.json",
+      "item_count": 10,
+      "covered_subtopics": [
+        "Domain 1: IPv4 Subnetting",
+        "Domain 1: OSI Model",
+        "Domain 1: DHCP",
+        "Domain 2: Multi-Factor Authentication",
+        "Domain 2: Symmetric vs Asymmetric Cryptography",
+        "Domain 3: Recursion",
+        "Domain 3: Version Control",
+        "Domain 3: Data Structures",
+        "Domain 4: Normalization",
+        "Domain 4: Transactions (ACID)"
+      ]
+    }
+  ],
+  "target_subtopics_for_next_batches": [
+    "Domain 1: Routing Protocols",
+    "Domain 2: Public Key Infrastructure",
+    "Domain 3: Object-Oriented Design",
+    "Domain 4: Indexing"
+  ]
+}

@@ -1,0 +1,212 @@
+[
+  {
+    "id": "SAMPLE-D1-004",
+    "domain": "Domain 1: Networking",
+    "subtopic": "IPv4 Subnetting",
+    "scenario_stem": "An office network is assigned the subnet 192.168.10.0/24. How many usable host addresses does this subnet provide?",
+    "options": {
+      "A": "256",
+      "B": "255",
+      "C": "254",
+      "D": "512"
+    },
+    "correct_option": "C",
+    "explanation": {
+      "correct": "A /24 leaves 8 host bits, or 2^8 = 256 addresses. Subtracting the network address (.0) and the broadcast address (.255) leaves 254 usable hosts.",
+      "distractors": {
+        "A": "256 is the total number of addresses in the block, including the network and broadcast addresses.",
+        "B": "255 subtracts only one of the two reserved addresses.",
+        "D": "512 addresses would require 9 host bits (a /23)."
+      }
+    }
+  },
+  {
+    "id": "SAMPLE-D1-005",
+    "domain": "Domain 1: Networking",
+    "subtopic": "OSI Model",
+    "scenario_stem": "A traditional (unmanaged) Ethernet switch decides which port to forward a frame to by consulting a table it has learned. At which OSI layer does this forwarding decision take place?",
+    "options": {
+      "A": "Layer 1 (Physical), using signal strength",
+      "B": "Layer 2 (Data Link), using MAC addresses",
+      "C": "Layer 3 (Network), using IP addresses",
+      "D": "Layer 7 (Application), using URLs"
+    },
+    "correct_option": "B",
+    "explanation": {
+      "correct": "A Layer 2 switch learns which MAC addresses sit behind which ports and forwards frames based on the destination MAC address.",
+      "distractors": {
+        "A": "Layer 1 devices such as hubs and repeaters just regenerate signals; they make no forwarding decisions.",
+        "C": "Forwarding based on IP addresses is routing, done by routers or Layer 3 switches.",
+        "D": "URL-based decisions are made by Layer 7 devices such as proxies and application load balancers."
+      }
+    }
+  },
+  {
+    "id": "SAMPLE-D1-006",
+    "domain": "Domain 1: Networking",
+    "subtopic": "DHCP",
+    "scenario_stem": "New laptops joining a corporate network receive an IP address, subnet mask, default gateway, and DNS servers without any manual configuration. Which protocol provides this?",
+    "options": {
+      "A": "DHCP",
+      "B": "ARP",
+      "C": "NAT",
+      "D": "ICMP"
+    },
+    "correct_option": "A",
+    "explanation": {
+      "correct": "The Dynamic Host Configuration Protocol (DHCP) automatically leases IP addresses and network settings to clients.",
+      "distractors": {
+        "B": "ARP resolves known IPv4 addresses to MAC addresses on the local network; it does not assign addresses.",
+        "C": "NAT translates private addresses to public ones at a network boundary; it does not configure hosts.",
+        "D": "ICMP carries diagnostic and error messages (for example, ping)."
+      }
+    }
+  },
+  {
+    "id": "SAMPLE-D2-004",
+    "domain": "Domain 2: Security",
+    "subtopic": "Multi-Factor Authentication",
+    "scenario_stem": "A company wants to add multi-factor authentication to its password-based login. Which addition creates a genuine second factor?",
+    "options": {
+      "A": "A second, different password",
+      "B": "A security question about the user's first pet",
+      "C": "A longer minimum password length",
+      "D": "A one-time code from an authenticator app on the user's phone"
+    },
+    "correct_option": "D",
+    "explanation": {
+      "correct": "An authenticator app proves possession of a device (something you have), which is a different factor from the password (something you know).",
+      "distractors": {
+        "A": "A second password is another 'something you know', so it is still single-factor.",
+        "B": "A security question is also 'something you know', and its answer is often discoverable.",
+        "C": "A longer password strengthens the existing factor but doesn't add a second one."
+      }
+    }
+  },
+  {
+    "id": "SAMPLE-D2-005",
+    "domain": "Domain 2: Security",
+    "subtopic": "Symmetric vs Asymmetric Cryptography",
+    "scenario_stem": "Two parties who have never met need to exchange a secret key over the internet. Which property of asymmetric (public-key) cryptography makes this possible?",
+    "options": {
+      "A": "It uses a single shared key for both encryption and decryption.",
+      "B": "It uses a key pair, so data encrypted with a public key can only be decrypted with the matching private key.",
+      "C": "It is significantly faster than symmetric encryption for bulk data.",
+      "D": "It produces a fixed-length digest that cannot be reversed."
+    },
+    "correct_option": "B",
+    "explanation": {
+      "correct": "Public keys can be shared openly while private keys stay secret. That allows key exchange without a pre-shared secret. TLS uses this to agree on a symmetric session key.",
+      "distractors": {
+        "A": "A single shared key describes symmetric cryptography, which requires the key to already be shared securely.",
+        "C": "Asymmetric algorithms are much slower than symmetric ones; that's why they're usually used just to set up a symmetric key.",
+        "D": "A fixed-length irreversible digest describes a hash function, not encryption."
+      }
+    }
+  },
+  {
+    "id": "SAMPLE-D3-003",
+    "domain": "Domain 3: Programming",
+    "subtopic": "Recursion",
+    "scenario_stem": "A recursive function that computes a factorial crashes with a stack overflow error for every input. What is the most likely cause?",
+    "options": {
+      "A": "It is missing a base case that stops the recursion.",
+      "B": "It uses an integer type instead of a floating-point type.",
+      "C": "It is declared as a function instead of a method.",
+      "D": "It returns a value instead of printing it."
+    },
+    "correct_option": "A",
+    "explanation": {
+      "correct": "Without a base case (for example, returning 1 when n <= 1), the function calls itself endlessly until the call stack is exhausted.",
+      "distractors": {
+        "B": "The numeric type can cause overflow or precision issues for large results, but not a stack overflow on every input.",
+        "C": "Whether it's a free function or a method doesn't affect recursion depth.",
+        "D": "Returning a value is the correct way for a recursive factorial to pass results back up the call chain."
+      }
+    }
+  },
+  {
+    "id": "SAMPLE-D3-004",
+    "domain": "Domain 3: Programming",
+    "subtopic": "Version Control",
+    "scenario_stem": "A developer has modified three files with Git but wants only two of them in the next commit. What is the correct workflow?",
+    "options": {
+      "A": "Run git commit -a, then remove the third file from the commit.",
+      "B": "Run git push for the two files only.",
+      "C": "Stage the two files with git add, then run git commit.",
+      "D": "Run git merge on the two files."
+    },
+    "correct_option": "C",
+    "explanation": {
+      "correct": "Git's staging area (index) lets you choose exactly which changes go into the next commit; git commit then records only what is staged.",
+      "distractors": {
+        "A": "git commit -a stages and commits every modified tracked file, including the one you wanted to leave out.",
+        "B": "git push uploads existing commits to a remote; it doesn't select files or create commits.",
+        "D": "git merge combines branches; it isn't used to choose files for a commit."
+      }
+    }
+  },
+  {
+    "id": "SAMPLE-D3-005",
+    "domain": "Domain 3: Programming",
+    "subtopic": "Data Structures",
+    "scenario_stem": "A service must check whether a username is already taken among millions of accounts, as fast as possible on average. Which in-memory data structure is the best fit?",
+    "options": {
+      "A": "An unsorted array",
+      "B": "A linked list",
+      "C": "A queue",
+      "D": "A hash set"
+    },
+    "correct_option": "D",
+    "explanation": {
+      "correct": "A hash set gives average O(1) membership checks by hashing the key straight to a bucket.",
+      "distractors": {
+        "A": "Searching an unsorted array requires an O(n) linear scan.",
+        "B": "A linked list also requires an O(n) traversal to find an element.",
+        "C": "A queue is built for FIFO processing, not fast membership checks."
+      }
+    }
+  },
+  {
+    "id": "SAMPLE-D4-003",
+    "domain": "Domain 4: Databases",
+    "subtopic": "Normalization",
+    "scenario_stem": "A table stores a customer's phone numbers as a comma-separated list in one column (for example, '555-0100, 555-0199'). Which normal form does this violate?",
+    "options": {
+      "A": "First Normal Form (1NF)",
+      "B": "Second Normal Form (2NF)",
+      "C": "Third Normal Form (3NF)",
+      "D": "Boyce-Codd Normal Form (BCNF)"
+    },
+    "correct_option": "A",
+    "explanation": {
+      "correct": "1NF requires each column to hold atomic (indivisible) values. A list packed into one column breaks that; the fix is a separate phone-numbers table.",
+      "distractors": {
+        "B": "2NF deals with partial dependencies on part of a composite key, and it assumes 1NF is already met.",
+        "C": "3NF removes transitive dependencies between non-key columns.",
+        "D": "BCNF is a stricter form of 3NF about determinants; the problem here is more basic."
+      }
+    }
+  },
+  {
+    "id": "SAMPLE-D4-004",
+    "domain": "Domain 4: Databases",
+    "subtopic": "Transactions (ACID)",
+    "scenario_stem": "A banking transfer debits one account and credits another. The server crashes after the debit but before the credit. Which ACID property guarantees the debit is rolled back, so money isn't lost?",
+    "options": {
+      "A": "Consistency",
+      "B": "Atomicity",
+      "C": "Isolation",
+      "D": "Durability"
+    },
+    "correct_option": "B",
+    "explanation": {
+      "correct": "Atomicity means a transaction is all or nothing: either every operation in it commits or none do.",
+      "distractors": {
+        "A": "Consistency ensures a transaction moves the database from one valid state to another under its rules and constraints; rolling back a half-finished transaction is atomicity's job.",
+        "C": "Isolation keeps concurrent transactions from seeing each other's intermediate state.",
+        "D": "Durability ensures committed transactions survive crashes; this transaction never committed."
+      }
+    }
+  }
+]

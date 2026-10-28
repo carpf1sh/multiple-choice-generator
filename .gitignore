@@ -1,0 +1,14 @@
+# Private exam content: kept locally, never committed
+exams.local.json
+private/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# Python cache (if helper scripts are added later)
+__pycache__/
+*.pyc

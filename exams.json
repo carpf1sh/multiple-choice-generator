@@ -1,0 +1,16 @@
+{
+  "exams": [
+    {
+      "id": "sample",
+      "name": "Computing Fundamentals (Sample)",
+      "title": "Computing Fundamentals Practice Test",
+      "manifest": "samples/sample_manifest.json",
+      "domains": [
+        { "key": "D1", "name": "Networking", "weight": 30 },
+        { "key": "D2", "name": "Security", "weight": 25 },
+        { "key": "D3", "name": "Programming", "weight": 25 },
+        { "key": "D4", "name": "Databases", "weight": 20 }
+      ]
+    }
+  ]
+}
