@@ -1,0 +1,178 @@
+[
+  {
+    "id": "CLOUD-D1-001",
+    "domain": "Domain 1: Cloud Concepts",
+    "subtopic": "Service Models",
+    "objective": "1.1",
+    "scenario_stem": "A development team wants to deploy its web application by uploading code. It does not want to provision virtual machines, patch operating systems or manage the language runtime. Which cloud service model fits best?",
+    "options": {
+      "A": "Infrastructure as a Service (IaaS)",
+      "B": "Platform as a Service (PaaS)",
+      "C": "Software as a Service (SaaS)",
+      "D": "On-premises colocation"
+    },
+    "correct_option": "B",
+    "explanation": {
+      "correct": "PaaS gives the team a managed runtime: they supply the application code and the provider runs and patches the servers, operating system and runtime underneath it.",
+      "distractors": {
+        "A": "IaaS provides virtual machines, storage and networking, but the customer still installs, patches and manages the operating system and runtime.",
+        "C": "SaaS delivers a finished application to end users. It doesn't host code the team has written.",
+        "D": "Colocation means renting rack space for your own hardware, which leaves even more to manage, not less."
+      }
+    }
+  },
+  {
+    "id": "CLOUD-D1-002",
+    "domain": "Domain 1: Cloud Concepts",
+    "subtopic": "Elasticity",
+    "objective": "1.2",
+    "scenario_stem": "An online retailer's traffic triples for a few days each November and then returns to normal. The company wants capacity added automatically during the spike and removed afterwards so it stops paying for idle servers. Which cloud characteristic does this describe?",
+    "options": {
+      "A": "Elasticity",
+      "B": "High availability",
+      "C": "Fault tolerance",
+      "D": "Data sovereignty"
+    },
+    "correct_option": "A",
+    "explanation": {
+      "correct": "Elasticity is the ability to grow and shrink resources automatically to match demand, so you pay only for the capacity you are using at the time.",
+      "distractors": {
+        "B": "High availability is about keeping a service reachable despite failures, not about matching capacity to changing load.",
+        "C": "Fault tolerance means continuing to operate correctly when a component fails; it says nothing about scaling with demand.",
+        "D": "Data sovereignty concerns which country's laws apply to data based on where it is stored."
+      }
+    }
+  },
+  {
+    "id": "CLOUD-D1-003",
+    "domain": "Domain 1: Cloud Concepts",
+    "subtopic": "Shared Responsibility Model",
+    "objective": "1.3",
+    "scenario_stem": "A company runs its application on virtual machines rented from a public cloud provider (IaaS). A critical vulnerability is announced in the guest operating system those virtual machines run. Under the shared responsibility model, who is responsible for patching it?",
+    "options": {
+      "A": "The cloud provider, because it owns the physical hosts",
+      "B": "The customer, because it manages the guest operating system",
+      "C": "Nobody, because virtual machines are isolated from each other",
+      "D": "The operating system vendor, which patches running machines remotely"
+    },
+    "correct_option": "B",
+    "explanation": {
+      "correct": "With IaaS the provider secures the physical facilities, hardware and hypervisor, while the customer is responsible for everything inside the virtual machine, including patching the guest operating system.",
+      "distractors": {
+        "A": "The provider owns and patches the physical hosts and hypervisor, but the guest operating system is the customer's side of the line in IaaS.",
+        "C": "Isolation between virtual machines doesn't protect a machine from attacks that exploit its own unpatched operating system.",
+        "D": "Operating system vendors publish patches, but they don't apply them to customers' running machines; the customer has to install them."
+      }
+    }
+  },
+  {
+    "id": "CLOUD-D2-001",
+    "domain": "Domain 2: Security and Compliance",
+    "subtopic": "Identity and Access Management",
+    "objective": "2.1",
+    "scenario_stem": "A CI/CD pipeline needs to upload build artifacts to one storage bucket. A team member suggests giving it the account's administrator credentials so that it never runs into permission errors. What is the better approach?",
+    "options": {
+      "A": "Give the pipeline administrator credentials but rotate them monthly",
+      "B": "Create a role that can only write to that one bucket and have the pipeline assume it",
+      "C": "Make the bucket publicly writable so the pipeline needs no credentials",
+      "D": "Share a team member's personal credentials with the pipeline"
+    },
+    "correct_option": "B",
+    "explanation": {
+      "correct": "A role scoped to writing to that single bucket follows the principle of least privilege: if the pipeline is compromised, the attacker can only reach that bucket.",
+      "distractors": {
+        "A": "Rotation shortens how long a leaked credential is useful, but a leaked administrator credential still exposes the whole account.",
+        "C": "A publicly writable bucket lets anyone on the internet upload or overwrite files.",
+        "D": "Personal credentials tie the pipeline to one person, usually carry far more access than it needs, and make audit logs misleading."
+      }
+    }
+  },
+  {
+    "id": "CLOUD-D2-002",
+    "domain": "Domain 2: Security and Compliance",
+    "subtopic": "Encryption and Key Management",
+    "objective": "2.2",
+    "scenario_stem": "A healthcare company stores patient records in cloud object storage. Its compliance team requires that the company itself can revoke access to the encryption keys at any time, making the data unreadable even to the provider's services. Which option meets this requirement?",
+    "options": {
+      "A": "Default encryption at rest with keys fully managed by the provider",
+      "B": "Encryption at rest using customer-managed keys in a key management service",
+      "C": "TLS encryption for data in transit only",
+      "D": "Storing the data in a private bucket without encryption"
+    },
+    "correct_option": "B",
+    "explanation": {
+      "correct": "With customer-managed keys the company controls the key policy and can disable or delete the key, which makes the encrypted data unreadable to anyone, including the provider's services.",
+      "distractors": {
+        "A": "Provider-managed keys do encrypt data at rest, but the company can't revoke or control them on its own.",
+        "C": "TLS protects data while it moves over the network; it does nothing for data sitting in storage.",
+        "D": "A private bucket restricts who can request the data, but without encryption there is no key to revoke."
+      }
+    }
+  },
+  {
+    "id": "CLOUD-D2-003",
+    "domain": "Domain 2: Security and Compliance",
+    "subtopic": "Secrets Management",
+    "objective": "2.1",
+    "scenario_stem": "During a code review, a security engineer finds a database password hard-coded in an application's source file, which is committed to the team's git repository. What is the best long-term fix?",
+    "options": {
+      "A": "Move the password into a comment so it isn't executed",
+      "B": "Base64-encode the password before committing it",
+      "C": "Store the password in a secrets manager and have the application fetch it at runtime",
+      "D": "Make the git repository private"
+    },
+    "correct_option": "C",
+    "explanation": {
+      "correct": "A secrets manager keeps credentials out of source code, restricts and audits who can read them, and allows rotation without code changes. The exposed password should also be rotated, since it remains in the git history.",
+      "distractors": {
+        "A": "A comment is still plain text in the repository, so anyone with access can read it.",
+        "B": "Base64 is an encoding, not encryption; anyone can decode it instantly.",
+        "D": "A private repository narrows who can see the secret, but everyone with access, and every clone, still has it."
+      }
+    }
+  },
+  {
+    "id": "CLOUD-D3-001",
+    "domain": "Domain 3: Operations and Cost",
+    "subtopic": "Pricing Models",
+    "objective": "3.1",
+    "scenario_stem": "A company runs an internal database server around the clock, with steady, predictable usage that it expects to continue for at least three years. Which pricing model will most likely cost the least?",
+    "options": {
+      "A": "On-demand pricing",
+      "B": "Spot or preemptible instances",
+      "C": "A reserved or committed-use discount for a multi-year term",
+      "D": "Paying per request through a serverless function"
+    },
+    "correct_option": "C",
+    "explanation": {
+      "correct": "Committing to steady usage for one to three years earns a large discount over on-demand rates, which suits a workload that runs continuously and predictably.",
+      "distractors": {
+        "A": "On-demand pricing gives flexibility with no commitment, but it is the most expensive rate for something that runs 24/7.",
+        "B": "Spot capacity is cheap but can be reclaimed at short notice, which suits interruptible jobs, not a database that must stay up.",
+        "D": "Serverless functions are billed per invocation and suit short, event-driven tasks, not a long-running database server."
+      }
+    }
+  },
+  {
+    "id": "CLOUD-D3-002",
+    "domain": "Domain 3: Operations and Cost",
+    "subtopic": "Pricing Models",
+    "objective": "3.1",
+    "scenario_stem": "A research lab runs thousands of independent image-processing jobs each night. Each job checkpoints its progress and can be restarted if it is interrupted, and the lab wants to minimise compute cost. Which option fits best?",
+    "options": {
+      "A": "Spot or preemptible instances",
+      "B": "Dedicated hosts",
+      "C": "A three-year reserved instance for each job",
+      "D": "On-demand instances with the largest available size"
+    },
+    "correct_option": "A",
+    "explanation": {
+      "correct": "Spot capacity is heavily discounted in exchange for the provider being able to reclaim it. Interruptible, checkpointed batch jobs can simply resume, so they get the savings with little downside.",
+      "distractors": {
+        "B": "Dedicated hosts give physical isolation, usually for licensing or compliance reasons, and cost more, not less.",
+        "C": "Reservations pay off for steady, always-on usage, not for bursty nightly jobs.",
+        "D": "On-demand is the full-price option, and choosing the largest size raises the cost further without being needed."
+      }
+    }
+  }
+]

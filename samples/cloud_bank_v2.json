@@ -1,0 +1,178 @@
+[
+  {
+    "id": "CLOUD-D1-004",
+    "domain": "Domain 1: Cloud Concepts",
+    "subtopic": "Deployment Models",
+    "objective": "1.1",
+    "scenario_stem": "A bank must keep customer account data in its own data center for regulatory reasons, but it wants to run its public marketing site and seasonal analytics workloads on a public cloud provider, with the two environments connected. Which deployment model is this?",
+    "options": {
+      "A": "Private cloud",
+      "B": "Public cloud",
+      "C": "Hybrid cloud",
+      "D": "Community cloud"
+    },
+    "correct_option": "C",
+    "explanation": {
+      "correct": "A hybrid cloud combines on-premises or private infrastructure with public cloud services and connects them, so each workload can run where it fits best.",
+      "distractors": {
+        "A": "A private cloud runs only on infrastructure dedicated to one organisation; it doesn't include the public cloud portion.",
+        "B": "A purely public cloud deployment would move the account data out of the bank's own data center, which it can't do.",
+        "D": "A community cloud is shared by several organisations with common requirements, such as a group of government agencies."
+      }
+    }
+  },
+  {
+    "id": "CLOUD-D1-005",
+    "domain": "Domain 1: Cloud Concepts",
+    "subtopic": "Regions and Availability Zones",
+    "objective": "1.2",
+    "scenario_stem": "An application must keep running if a single data center loses power, and its servers need very low latency between each other. Where should the company deploy them?",
+    "options": {
+      "A": "On one large instance in a single availability zone",
+      "B": "Across multiple availability zones in one region",
+      "C": "Across regions on different continents",
+      "D": "On edge locations of a content delivery network"
+    },
+    "correct_option": "B",
+    "explanation": {
+      "correct": "Availability zones are physically separate data centers within one region, connected by fast, low-latency links. Spreading servers across them survives a single data center failure without the latency of long distances.",
+      "distractors": {
+        "A": "A single instance in one zone is a single point of failure; if that data center goes down, so does the application.",
+        "C": "Multi-region deployments protect against a whole region failing, but the distance adds latency that this application can't tolerate.",
+        "D": "CDN edge locations cache content close to users; they don't host the application's servers."
+      }
+    }
+  },
+  {
+    "id": "CLOUD-D1-006",
+    "domain": "Domain 1: Cloud Concepts",
+    "subtopic": "Serverless Computing",
+    "objective": "1.1",
+    "scenario_stem": "A team needs to resize images whenever a user uploads one. Uploads are unpredictable, sometimes none for hours, and the team wants to pay nothing while nothing is happening. Which approach fits best?",
+    "options": {
+      "A": "A virtual machine that polls the storage bucket every minute",
+      "B": "A serverless function triggered by the upload event",
+      "C": "A container cluster sized for peak load",
+      "D": "A reserved instance running an image server"
+    },
+    "correct_option": "B",
+    "explanation": {
+      "correct": "A serverless function runs only when an upload event triggers it, scales automatically with bursts, and is billed per execution, so idle periods cost nothing.",
+      "distractors": {
+        "A": "A polling virtual machine is billed for every hour it runs, even when there is nothing to process.",
+        "C": "A cluster sized for peak load pays for that capacity all the time, including the hours with no uploads.",
+        "D": "A reserved instance is a commitment to run continuously, the opposite of paying only when there is work."
+      }
+    }
+  },
+  {
+    "id": "CLOUD-D2-004",
+    "domain": "Domain 2: Security and Compliance",
+    "subtopic": "Network Security",
+    "objective": "2.3",
+    "scenario_stem": "A three-tier application has a public load balancer, application servers and a database. The security team wants the database to be unreachable from the internet. Which design achieves this?",
+    "options": {
+      "A": "Put the database in a public subnet with a strong password",
+      "B": "Put the database in a private subnet and allow inbound traffic only from the application servers' security group",
+      "C": "Give the database a public IP address but change its default port",
+      "D": "Put the database behind the same public load balancer as the web tier"
+    },
+    "correct_option": "B",
+    "explanation": {
+      "correct": "A private subnet has no route from the internet, and a firewall rule that admits only the application tier limits who can connect even from inside the network. Together they keep the database off the internet.",
+      "distractors": {
+        "A": "A strong password helps, but a database in a public subnet can still be reached and attacked from the internet.",
+        "C": "Changing the port is obscurity, not protection; port scans find the service quickly.",
+        "D": "Placing the database behind a public load balancer would expose it to the internet, the opposite of the goal."
+      }
+    }
+  },
+  {
+    "id": "CLOUD-D2-005",
+    "domain": "Domain 2: Security and Compliance",
+    "subtopic": "Logging and Auditing",
+    "objective": "2.3",
+    "scenario_stem": "A production storage bucket was deleted overnight. The operations manager needs to find out which identity deleted it, when, and from which IP address. Where should they look?",
+    "options": {
+      "A": "The application's own error logs",
+      "B": "The provider's audit log of management API calls",
+      "C": "The bucket's CPU utilisation metrics",
+      "D": "The monthly billing report"
+    },
+    "correct_option": "B",
+    "explanation": {
+      "correct": "Cloud providers record management (control-plane) API calls in an audit log, including the caller's identity, the time, the action and the source IP address.",
+      "distractors": {
+        "A": "Application logs record what the application does; a bucket deleted through the console or API wouldn't appear there.",
+        "C": "Utilisation metrics measure performance, not who performed an action.",
+        "D": "Billing reports show costs per resource and usually lag by hours or days; they don't identify who made a change."
+      }
+    }
+  },
+  {
+    "id": "CLOUD-D3-003",
+    "domain": "Domain 3: Operations and Cost",
+    "subtopic": "Infrastructure as Code",
+    "objective": "3.2",
+    "scenario_stem": "A team's staging and production environments keep drifting apart because engineers make manual changes in the provider's web console. What practice best prevents this?",
+    "options": {
+      "A": "Document every manual change in a shared spreadsheet",
+      "B": "Define the infrastructure as code, keep it in version control and apply changes through a pipeline",
+      "C": "Restrict console access to one senior engineer",
+      "D": "Take a screenshot of each environment's settings every week"
+    },
+    "correct_option": "B",
+    "explanation": {
+      "correct": "Infrastructure as code describes each environment in reviewable, versioned files. Applying the same templates to staging and production keeps them consistent, and drift shows up as a difference from the code.",
+      "distractors": {
+        "A": "A spreadsheet records changes after the fact but doesn't stop the environments diverging, and it is easy to forget to update.",
+        "C": "Limiting access to one person reduces who can make changes but still leaves them manual and unrepeatable.",
+        "D": "Screenshots can show that drift happened but do nothing to prevent it or to rebuild an environment."
+      }
+    }
+  },
+  {
+    "id": "CLOUD-D3-004",
+    "domain": "Domain 3: Operations and Cost",
+    "subtopic": "Monitoring and Alerting",
+    "objective": "3.2",
+    "scenario_stem": "Users occasionally report that a checkout page is slow, but by the time the team checks, everything looks fine. The team wants to be notified as soon as performance degrades. What should they set up?",
+    "options": {
+      "A": "An alarm on the 95th-percentile response-time metric that notifies the on-call engineer",
+      "B": "A weekly report of average CPU usage",
+      "C": "Larger instances for the checkout service",
+      "D": "Manual spot checks of the page every morning"
+    },
+    "correct_option": "A",
+    "explanation": {
+      "correct": "An alarm on a latency metric such as the 95th percentile fires when slow requests appear, so the team learns about the problem while it is happening.",
+      "distractors": {
+        "B": "A weekly CPU average is too infrequent to catch short slowdowns and may not reflect response time at all.",
+        "C": "Bigger instances might hide the symptom, but they don't tell the team when or why the slowdown happens.",
+        "D": "Spot checks only sample one moment a day and would miss most intermittent problems."
+      }
+    }
+  },
+  {
+    "id": "CLOUD-D3-005",
+    "domain": "Domain 3: Operations and Cost",
+    "subtopic": "Backup and Recovery",
+    "objective": "3.3",
+    "scenario_stem": "A business states that, after an outage, it can afford to lose at most 15 minutes of order data. Which recovery metric does this requirement define?",
+    "options": {
+      "A": "Recovery Time Objective (RTO)",
+      "B": "Recovery Point Objective (RPO)",
+      "C": "Mean Time Between Failures (MTBF)",
+      "D": "Service Level Agreement (SLA) uptime percentage"
+    },
+    "correct_option": "B",
+    "explanation": {
+      "correct": "The RPO is the maximum acceptable amount of data loss, measured as time before the failure. A 15-minute RPO means backups or replication must capture changes at least every 15 minutes.",
+      "distractors": {
+        "A": "The RTO is how long it may take to restore service after an outage, not how much data may be lost.",
+        "C": "MTBF measures how often a system fails on average; it doesn't set a limit on data loss.",
+        "D": "An SLA uptime percentage promises availability over a period and says nothing about how much data can be lost."
+      }
+    }
+  }
+]

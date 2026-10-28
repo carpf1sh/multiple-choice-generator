@@ -11,6 +11,17 @@
         { "key": "D3", "name": "Programming", "weight": 25 },
         { "key": "D4", "name": "Databases", "weight": 20 }
       ]
+    },
+    {
+      "id": "cloud-sample",
+      "name": "Cloud Essentials (Sample)",
+      "title": "Cloud Essentials Practice Test",
+      "manifest": "samples/cloud_manifest.json",
+      "domains": [
+        { "key": "D1", "name": "Cloud Concepts", "weight": 40 },
+        { "key": "D2", "name": "Security and Compliance", "weight": 30 },
+        { "key": "D3", "name": "Operations and Cost", "weight": 30 }
+      ]
     }
   ]
 }

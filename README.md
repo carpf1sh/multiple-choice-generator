@@ -6,9 +6,9 @@ A local, browser-based multiple-choice practice test generator. It builds tests 
 
 - **Runs entirely on your machine.** No accounts, API keys, AI/LLM calls or internet access. Question selection is plain, deterministic JavaScript.
 - **No build step and no dependencies.** Plain HTML, CSS and JavaScript, served by Python's built-in web server.
-- **Ships with a sample exam.** A 20-question *Computing Fundamentals* bank in [`samples/`](samples/) works out of the box.
+- **Ships with two sample exams.** A 20-question *Computing Fundamentals* bank and a 16-question *Cloud Essentials* bank in [`samples/`](samples/) work out of the box and show how several exams sit side by side.
 
-**Try it online:** <https://carpf1sh.github.io/multiple-choice-generator/> runs the sample exam on GitHub Pages, published from `main` on every push. To use your own question banks, run it locally.
+**Try it online:** <https://carpf1sh.github.io/multiple-choice-generator/> runs the sample exams on GitHub Pages, published from `main` on every push. To use your own question banks, run it locally.
 
 ---
 
@@ -137,7 +137,10 @@ Then open <http://localhost:47823>. On Windows the command is usually `python` r
 └── samples/
     ├── sample_manifest.json
     ├── sample_bank_v1.json
-    └── sample_bank_v2.json
+    ├── sample_bank_v2.json
+    ├── cloud_manifest.json
+    ├── cloud_bank_v1.json
+    └── cloud_bank_v2.json
 ```
 
 The app is a single script with no framework. It renders each screen (**Setup → Test → Results**) by building HTML strings and escaping all question text before inserting it.
@@ -359,4 +362,4 @@ python -m unittest discover -s tests
 
 Copyright 2026 Brandon Carp. Licensed under the [Apache License, Version 2.0](LICENSE); see [NOTICE](NOTICE).
 
-This covers the app code and the sample question bank in `samples/`. Question banks you add yourself, including any in `private/` or registered in `exams.local.json`, are not part of this repository and aren't covered by its license.
+This covers the app code and the sample question banks in `samples/`. Question banks you add yourself, including any in `private/` or registered in `exams.local.json`, are not part of this repository and aren't covered by its license.

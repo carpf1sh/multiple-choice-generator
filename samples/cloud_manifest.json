@@ -1,0 +1,40 @@
+{
+  "manifest_version": "1.0",
+  "total_questions": 16,
+  "batches": [
+    {
+      "batch_id": "v1",
+      "file_name": "cloud_bank_v1.json",
+      "item_count": 8,
+      "covered_subtopics": [
+        "Domain 1: Service Models",
+        "Domain 1: Elasticity",
+        "Domain 1: Shared Responsibility Model",
+        "Domain 2: Identity and Access Management",
+        "Domain 2: Encryption and Key Management",
+        "Domain 2: Secrets Management",
+        "Domain 3: Pricing Models"
+      ]
+    },
+    {
+      "batch_id": "v2",
+      "file_name": "cloud_bank_v2.json",
+      "item_count": 8,
+      "covered_subtopics": [
+        "Domain 1: Deployment Models",
+        "Domain 1: Regions and Availability Zones",
+        "Domain 1: Serverless Computing",
+        "Domain 2: Network Security",
+        "Domain 2: Logging and Auditing",
+        "Domain 3: Infrastructure as Code",
+        "Domain 3: Monitoring and Alerting",
+        "Domain 3: Backup and Recovery"
+      ]
+    }
+  ],
+  "target_subtopics_for_next_batches": [
+    "Domain 1: Cloud Migration Strategies",
+    "Domain 2: Compliance Frameworks",
+    "Domain 3: Cost Allocation and Tagging"
+  ]
+}
