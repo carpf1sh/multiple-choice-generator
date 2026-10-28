@@ -8,6 +8,8 @@ A local, browser-based multiple-choice practice test generator. It builds tests 
 - **No build step and no dependencies.** Plain HTML, CSS and JavaScript, served by Python's built-in web server.
 - **Ships with a sample exam.** A 20-question *Computing Fundamentals* bank in [`samples/`](samples/) works out of the box.
 
+**Try it online:** <https://carpf1sh.github.io/multiple-choice-generator/> runs the sample exam on GitHub Pages, published from `main` on every push. To use your own question banks, run it locally.
+
 ---
 
 ## Contents
@@ -124,7 +126,7 @@ Then open <http://localhost:47823>. On Windows the command is usually `python` r
 ├── stop.bat              Stops the background server
 ├── server.pyw            Windowless static server used by start.bat
 ├── tests/                Node and Python tests (see Testing)
-├── .github/              CI, CodeQL and Dependabot configuration
+├── .github/              CI, CodeQL, Pages deployment and Dependabot configuration
 └── samples/
     ├── sample_manifest.json
     ├── sample_bank_v1.json
@@ -290,6 +292,7 @@ Everything stays in your browser's `localStorage`, scoped to the server's origin
 - **Reset history** on the setup screen clears `mcq.history`.
 - Because storage is per origin, using a different port (for example, `start.bat 8080`) starts with empty settings and history.
 - Clearing your browser's site data for `localhost` resets everything.
+- The [online version](https://carpf1sh.github.io/multiple-choice-generator/) keeps its own separate settings and history, stored under `carpf1sh.github.io`.
 
 ---
 
