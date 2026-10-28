@@ -409,10 +409,12 @@ function renderSetup() {
   const custom = s.customWeights[exam.id] || {};
 
   const examPicker = state.exams.length > 1 ? `
-    <label class="field" for="exam-select">Exam</label>
-    <select id="exam-select">
-      ${state.exams.map((e) => `<option value="${esc(e.id)}" ${e.id === exam.id ? 'selected' : ''}>${esc(e.name)}</option>`).join('')}
-    </select>` : '';
+    <div class="row exam-picker">
+      <label class="field" for="exam-select">Exam</label>
+      <select id="exam-select">
+        ${state.exams.map((e) => `<option value="${esc(e.id)}" ${e.id === exam.id ? 'selected' : ''}>${esc(e.name)}</option>`).join('')}
+      </select>
+    </div>` : '';
 
   const domainRows = exam.domains.map((d) => {
     const share = pct(avail[d.key], total);

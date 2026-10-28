@@ -160,6 +160,8 @@ input[type="range"] { flex: 1; min-width: 140px; accent-color: var(--accent); }
 
 /* ---------- Setup: domain coverage ---------- */
 
+.exam-picker { margin-bottom: 1rem; }
+.exam-picker label.field { margin-bottom: 0; }
 .stat-line { display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
 .stat { display: flex; flex-direction: column; }
 .stat b { font-size: 1.4rem; line-height: 1.2; }
