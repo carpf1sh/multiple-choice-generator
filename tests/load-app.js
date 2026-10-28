@@ -14,6 +14,7 @@ const EXPORTS = [
   'state', 'esc', 'shuffle', 'shuffleOptions', 'groupBy', 'clamp', 'pct', 'formatDuration',
   'domainKeyFor', 'normalize', 'examList', 'largestRemainder', 'allocate', 'priorityScore',
   'orderByPriority', 'interleave', 'pickFromDomain', 'currentWeights', 'availableByDomain', 'planTest',
+  'MAX_ATTEMPTS', 'attemptRecord', 'recordAttempt', 'attemptSummary', 'restoreAttempt',
 ];
 
 function fakeElement() {

@@ -285,3 +285,8 @@ details ul { margin: .4rem 0 0; padding-left: 1.2rem; }
 details li { margin-bottom: .3rem; }
 
 .empty { color: var(--muted); padding: 1rem 0; }
+
+.history-table .bar-cell { width: 22%; }
+@media (max-width: 640px) {
+  .history-table .bar-cell, .history-table th:nth-child(2), .history-table td:nth-child(2) { display: none; }
+}

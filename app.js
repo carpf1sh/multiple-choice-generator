@@ -6,8 +6,9 @@
  * ===================================================================== */
 
 const MAX_QUESTIONS = 200;
+const MAX_ATTEMPTS = 100;  // finished tests kept in test history, across all exams
 const LETTERS = 'ABCDEFGHIJ';
-const KEYS = { settings: 'mcq.settings', history: 'mcq.history', theme: 'mcq.theme' };
+const KEYS = { settings: 'mcq.settings', history: 'mcq.history', attempts: 'mcq.attempts', theme: 'mcq.theme' };
 
 const DEFAULT_SETTINGS = {
   examId: null,
@@ -44,6 +45,7 @@ const state = {
   warnings: [],
   settings: { ...DEFAULT_SETTINGS, ...store.get(KEYS.settings, {}) },
   history: store.get(KEYS.history, {}) || {},
+  attempts: [].concat(store.get(KEYS.attempts, []) || []).filter((a) => a && Array.isArray(a.questions)),
   test: null,
   timer: null,
   reviewFilter: 'all',
@@ -51,6 +53,7 @@ const state = {
 
 const saveSettings = () => store.set(KEYS.settings, state.settings);
 const saveHistory = () => store.set(KEYS.history, state.history);
+const saveAttempts = () => store.set(KEYS.attempts, state.attempts);
 
 /* ---------- Helpers ---------- */
 
@@ -72,9 +75,10 @@ function shuffle(arr) {
 
 // Returns a copy of the question with its option texts moved to random letters.
 // The letters themselves stay in place; the answer and distractors follow their text.
-function shuffleOptions(q) {
+// order[i] is the original letter shown at position i; pass one to replay a past shuffle.
+function shuffleOptions(q, order) {
   const base = q.source || q;
-  const order = shuffle(base.letters);
+  order ||= shuffle(base.letters);
   const toNew = Object.fromEntries(order.map((orig, i) => [orig, base.letters[i]]));
   const remap = (obj) => Object.fromEntries(Object.entries(obj).map(([k, v]) => [toNew[k] ?? k, v]));
   return {
@@ -82,6 +86,7 @@ function shuffleOptions(q) {
     options: remap(base.options),
     answer: toNew[base.answer],
     distractors: remap(base.distractors),
+    optionOrder: order,
     source: base,
   };
 }
@@ -105,6 +110,8 @@ function formatDuration(ms) {
   const mm = String(m).padStart(h ? 2 : 1, '0'), ss = String(sec).padStart(2, '0');
   return h ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
 }
+
+const formatDate = (ts) => new Date(ts).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 
 const domainOf = (key) => state.exam?.domains.find((d) => d.key === key);
 const domainName = (key) => domainOf(key)?.name || key || 'Unknown domain';
@@ -398,6 +405,7 @@ function renderSetup() {
   const avail = availableByDomain();
   const weightSum = exam.domains.reduce((a, d) => a + (Number(d.weight) || 0), 0);
   const seenCount = state.questions.filter((q) => state.history[q.id]?.seen).length;
+  const testsTaken = examAttempts().length;
   const custom = s.customWeights[exam.id] || {};
 
   const examPicker = state.exams.length > 1 ? `
@@ -426,13 +434,17 @@ function renderSetup() {
     <section class="card">
       <div class="card-head">
         <h2>Question bank</h2>
-        <button class="btn btn-sm" id="reload-bank" type="button">↻ Reload bank</button>
+        <div class="row">
+          <button class="btn btn-sm" id="show-history" type="button">Test history</button>
+          <button class="btn btn-sm" id="reload-bank" type="button">↻ Reload bank</button>
+        </div>
       </div>
       ${examPicker}
       <div class="stat-line">
         <div class="stat"><b>${total}</b><span>questions</span></div>
         <div class="stat"><b>${state.batches.length}</b><span>batch${state.batches.length === 1 ? '' : 'es'}</span></div>
         <div class="stat"><b>${seenCount}</b><span>seen before</span></div>
+        <div class="stat"><b>${testsTaken}</b><span>test${testsTaken === 1 ? '' : 's'} taken</span></div>
       </div>
       <table class="domain-table">
         <thead><tr><th>Domain</th><th class="num">Questions</th><th>Bank share vs exam weight</th><th class="num">Share / weight</th></tr></thead>
@@ -595,11 +607,13 @@ function bindSetup() {
   $('#priority').addEventListener('change', (e) => { s.priority = e.target.value; commit(); });
 
   $('#reset-history').addEventListener('click', () => {
-    if (!confirm('Clear your answer history? "Prefer unseen" and "Focus on missed" will start fresh.')) return;
+    if (!confirm('Clear your answer history? "Prefer unseen" and "Focus on missed" will start fresh. Your test history is kept.')) return;
     state.history = {};
     saveHistory();
     renderSetup();
   });
+
+  $('#show-history').addEventListener('click', renderHistory);
 
   $('#reload-bank').addEventListener('click', async () => {
     app().innerHTML = '<div class="loading">Reloading question bank…</div>';
@@ -624,11 +638,13 @@ function bindSetup() {
  * Test screen
  * ===================================================================== */
 
-function startTest(questions) {
+// kind: new | retake | missed (how the test was started; shown in test history)
+function startTest(questions, kind = 'new') {
   if (!questions.length) return;
   const n = questions.length;
   const shuffled = state.settings.shuffleOptions;
   state.test = {
+    kind,
     questions: questions.map((q) => (shuffled ? shuffleOptions(q) : q.source || q)),
     shuffleOptions: shuffled,
     answers: Array(n).fill(null),
@@ -810,6 +826,7 @@ function finishTest() {
     h.last = t.endedAt;
   });
   saveHistory();
+  recordAttempt(t);
   renderResults();
   window.scrollTo(0, 0);
 }
@@ -838,7 +855,9 @@ function renderResults() {
   }));
   const correct = results.filter((r) => r.status === 'correct').length;
   const skipped = results.filter((r) => r.status === 'skipped').length;
-  const missed = results.filter((r) => r.status !== 'correct');
+  const missed = results.filter((r) => r.status !== 'correct' && !r.q.unavailable);
+  const retakeable = t.questions.filter((q) => !q.unavailable);
+  const unavailable = n - retakeable.length;
   const score = pct(correct, n);
   const weightSum = state.exam.domains.reduce((a, d) => a + (Number(d.weight) || 0), 0);
 
@@ -863,12 +882,15 @@ function renderResults() {
         <div>
           <div><b>${correct}</b> of <b>${n}</b> correct${skipped ? ` · ${skipped} unanswered` : ''}</div>
           <div class="muted">Time ${formatDuration(t.endedAt - t.startedAt)} · ${t.feedback === 'immediate' ? 'Immediate feedback' : 'Feedback at end'} · ${t.allowSkip ? 'Skipping allowed' : 'No skipping'}${t.shuffleOptions ? ' · Choices shuffled' : ''}</div>
+          ${t.fromHistory ? `<div class="muted">Taken ${esc(formatDate(t.endedAt))}</div>` : ''}
         </div>
       </div>
+      ${unavailable ? `<div class="notice notice-warn">${unavailable} question${unavailable > 1 ? 's have' : ' has'} been removed or changed in the bank since this test, so ${unavailable > 1 ? 'they' : 'it'} can't be shown or retaken.</div>` : ''}
       <div class="row" style="margin-top:1.1rem">
         <button class="btn btn-primary" id="new-test" type="button">New test</button>
-        <button class="btn" id="retake" type="button">Retake same questions</button>
+        <button class="btn" id="retake" type="button" ${retakeable.length ? '' : 'disabled'}>Retake same questions</button>
         <button class="btn" id="retry-missed" type="button" ${missed.length ? '' : 'disabled'}>Practice the ${missed.length} missed</button>
+        <button class="btn" id="to-history" type="button">${t.fromHistory ? '← Back to history' : 'Test history'}</button>
       </div>
     </section>
 
@@ -900,8 +922,9 @@ function renderResults() {
     renderReviewList(results);
   }));
   $('#new-test').addEventListener('click', renderSetup);
-  $('#retake').addEventListener('click', () => startTest(t.questions.slice()));
-  $('#retry-missed').addEventListener('click', () => startTest(shuffle(missed.map((r) => r.q))));
+  $('#retake').addEventListener('click', () => startTest(retakeable, 'retake'));
+  $('#retry-missed').addEventListener('click', () => startTest(shuffle(missed.map((r) => r.q)), 'missed'));
+  $('#to-history').addEventListener('click', renderHistory);
 }
 
 function filterBtn(value, label) {
@@ -921,12 +944,18 @@ function renderReviewList(results) {
       return `<li class="${cls}"><b>${L}.</b><span>${esc(q.options[L])}</span>${L === chosen ? '<span class="you">Your answer</span>' : ''}</li>`;
     }).join('');
     const others = q.letters.filter((L) => L !== q.answer && q.distractors[L]);
-    return `<article class="review-item">
-      <div class="review-head">
+    const head = `<div class="review-head">
         <b>Q${i + 1}</b>${badge}
         <span class="tag">${esc(q.domainKey)}</span>
-        <span class="tag plain">${esc(q.subtopic)}</span>
-      </div>
+        ${q.subtopic ? `<span class="tag plain">${esc(q.subtopic)}</span>` : ''}
+      </div>`;
+    if (q.unavailable) {
+      return `<article class="review-item">${head}
+        <p class="muted">${esc(q.id)} is no longer in the bank as it was. ${chosen ? `You answered ${esc(chosen)}; the answer was ${esc(q.answer)}.` : `The answer was ${esc(q.answer)}.`}</p>
+      </article>`;
+    }
+    return `<article class="review-item">
+      ${head}
       <div class="stem" style="font-size:.98rem;margin-bottom:.4rem">${esc(q.stem)}</div>
       <ul class="review-options">${opts}</ul>
       <div class="explain">
@@ -936,6 +965,167 @@ function renderReviewList(results) {
       </div>
     </article>`;
   }).join('');
+}
+
+/* =====================================================================
+ * Test history
+ * Each finished test is stored compactly: question ids and letters only.
+ * Viewing one rebuilds it from the current bank.
+ * ===================================================================== */
+
+const KIND_LABELS = { new: 'New test', retake: 'Retake', missed: 'Missed practice' };
+
+function attemptRecord(t, examId) {
+  return {
+    examId,
+    kind: t.kind || 'new',
+    startedAt: t.startedAt,
+    endedAt: t.endedAt,
+    feedback: t.feedback,
+    allowSkip: t.allowSkip,
+    shuffleOptions: t.shuffleOptions,
+    questions: t.questions.map((q, i) => ({
+      id: q.id,
+      domain: q.domainKey,
+      chosen: t.answers[i],
+      answer: q.answer,
+      ...(q.optionOrder ? { order: q.optionOrder } : {}),
+    })),
+  };
+}
+
+function recordAttempt(t) {
+  state.attempts.push(attemptRecord(t, state.exam.id));
+  state.attempts = state.attempts.slice(-MAX_ATTEMPTS);
+  saveAttempts();
+}
+
+function attemptSummary(a) {
+  const total = a.questions.length;
+  const correct = a.questions.filter((r) => r.chosen === r.answer).length;
+  const skipped = a.questions.filter((r) => r.chosen == null).length;
+  return { total, correct, skipped, score: pct(correct, total) };
+}
+
+const examAttempts = () => state.attempts.filter((a) => a.examId === state.exam?.id);
+
+// Rebuild a finished test from a stored attempt. Questions that have left the
+// bank, or whose answer no longer matches, become placeholders that keep the score.
+function restoreAttempt(a) {
+  const bank = new Map(state.questions.map((q) => [q.id, q]));
+  const questions = a.questions.map((r) => {
+    const base = bank.get(r.id);
+    const sameLetters = (o) => Array.isArray(o) && o.length === base.letters.length && [...o].sort().join() === base.letters.join();
+    let q = base && (r.order ? sameLetters(r.order) && shuffleOptions(base, r.order) : base);
+    if (!q || q.answer !== r.answer) {
+      q = { id: r.id, domainKey: r.domain, subtopic: '', objective: '', stem: '', options: {}, letters: [], answer: r.answer, explanation: '', distractors: {}, unavailable: true };
+    }
+    return q;
+  });
+  const n = questions.length;
+  return {
+    kind: a.kind,
+    questions,
+    shuffleOptions: !!a.shuffleOptions,
+    answers: a.questions.map((r) => r.chosen ?? null),
+    locked: Array(n).fill(true),
+    visited: Array(n).fill(true),
+    current: 0,
+    furthest: n - 1,
+    allowSkip: a.allowSkip,
+    feedback: a.feedback,
+    startedAt: a.startedAt,
+    endedAt: a.endedAt,
+    fromHistory: true,
+  };
+}
+
+function renderHistory() {
+  stopTimer();
+  state.test = null;
+  const attempts = examAttempts();
+  const summaries = attempts.map(attemptSummary);
+  const scores = summaries.map((s) => s.score);
+  const avg = (xs) => (xs.length ? Math.round(xs.reduce((a, b) => a + b, 0) / xs.length) : 0);
+  const scoreBar = (p) => `<div class="bar"><span style="width:${p}%;background:${p >= 70 ? 'var(--good)' : 'var(--bad)'}"></span></div>`;
+
+  // Domain totals across every recorded test for this exam.
+  const byDomain = {};
+  for (const a of attempts) for (const r of a.questions) {
+    const d = (byDomain[r.domain] ||= { correct: 0, total: 0 });
+    d.total++;
+    if (r.chosen === r.answer) d.correct++;
+  }
+  const domainRows = state.exam.domains.filter((d) => byDomain[d.key]).map((d) => {
+    const { correct, total } = byDomain[d.key];
+    const p = pct(correct, total);
+    return `<tr>
+      <td><span class="dkey">${esc(d.key)}</span>${esc(d.name)}</td>
+      <td class="num">${correct}/${total}</td>
+      <td class="bar-cell">${scoreBar(p)}</td>
+      <td class="num">${p}%</td>
+    </tr>`;
+  }).join('');
+
+  const rows = attempts.map((a, i) => {
+    const s = summaries[i];
+    return `<tr>
+      <td>${esc(formatDate(a.endedAt))}</td>
+      <td>${esc(KIND_LABELS[a.kind] || KIND_LABELS.new)}</td>
+      <td class="num">${s.correct}/${s.total}</td>
+      <td class="bar-cell">${scoreBar(s.score)}</td>
+      <td class="num">${s.score}%</td>
+      <td class="num">${formatDuration(a.endedAt - a.startedAt)}</td>
+      <td class="num"><button class="btn btn-sm" type="button" data-attempt="${i}">Review</button></td>
+    </tr>`;
+  }).reverse().join('');
+
+  app().innerHTML = `
+    <section class="card">
+      <div class="card-head">
+        <h2>Test history</h2>
+        <button class="btn btn-sm" id="history-back" type="button">← Back</button>
+      </div>
+      ${attempts.length ? `
+      <div class="stat-line">
+        <div class="stat"><b>${attempts.length}</b><span>test${attempts.length === 1 ? '' : 's'} taken</span></div>
+        <div class="stat"><b>${avg(scores)}%</b><span>average score</span></div>
+        <div class="stat"><b>${Math.max(...scores)}%</b><span>best score</span></div>
+        <div class="stat"><b>${avg(scores.slice(-5))}%</b><span>average of last ${Math.min(5, scores.length)}</span></div>
+      </div>
+      <table class="domain-table history-table">
+        <thead><tr><th>Finished</th><th>Type</th><th class="num">Correct</th><th></th><th class="num">Score</th><th class="num">Time</th><th></th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <div class="row" style="margin-top:1rem">
+        <span class="muted small">The last ${MAX_ATTEMPTS} finished tests are kept in this browser.</span>
+        <span class="spacer"></span>
+        <button class="btn btn-sm" id="clear-attempts" type="button">Clear test history</button>
+      </div>` : '<div class="empty">No finished tests for this exam yet. Results are saved here each time you finish a test.</div>'}
+    </section>
+    ${domainRows ? `
+    <section class="card">
+      <h2>By domain, all tests</h2>
+      <table class="domain-table">
+        <thead><tr><th>Domain</th><th class="num">Correct</th><th></th><th class="num">Score</th></tr></thead>
+        <tbody>${domainRows}</tbody>
+      </table>
+    </section>` : ''}`;
+
+  $('#history-back').addEventListener('click', renderSetup);
+  app().querySelectorAll('[data-attempt]').forEach((b) => b.addEventListener('click', () => {
+    state.test = restoreAttempt(attempts[Number(b.dataset.attempt)]);
+    state.reviewFilter = 'all';
+    renderResults();
+    window.scrollTo(0, 0);
+  }));
+  $('#clear-attempts')?.addEventListener('click', () => {
+    if (!confirm(`Delete all ${attempts.length} saved test${attempts.length === 1 ? '' : 's'} for this exam? Your answer history used for question selection is kept.`)) return;
+    state.attempts = state.attempts.filter((a) => a.examId !== state.exam.id);
+    saveAttempts();
+    renderHistory();
+  });
+  window.scrollTo(0, 0);
 }
 
 /* =====================================================================

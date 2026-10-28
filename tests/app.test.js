@@ -196,6 +196,73 @@ test('shuffleOptions on a shuffled copy starts from the original', () => {
   assert.equal(twice.options[twice.answer], 'Two');
 });
 
+test('shuffleOptions replays a given order', () => {
+  const base = app.normalize(raw(), 'f', 0);
+  const s = app.shuffleOptions(base, ['D', 'B', 'A', 'C']);
+  assert.deepEqual(plain(s.options), { A: 'Four', B: 'Two', C: 'One', D: 'Three' });
+  assert.equal(s.answer, 'B');
+  assert.deepEqual(plain(s.optionOrder), ['D', 'B', 'A', 'C']);
+});
+
+/* ---------- Test history ---------- */
+
+const finished = (questions, answers, extra = {}) => ({
+  kind: 'new', questions, answers, feedback: 'end', allowSkip: true, shuffleOptions: false,
+  startedAt: 1000, endedAt: 61000, ...extra,
+});
+
+test('a stored attempt restores to the same questions, answers and score', () => {
+  const base = app.normalize(raw(), 'f', 0);
+  const other = app.normalize(raw({ id: 'X-D1-002', correct_option: 'A' }), 'f', 1);
+  app.state.questions = [base, other];
+  const shuffled = app.shuffleOptions(base, ['C', 'A', 'D', 'B']);
+  const rec = app.attemptRecord(finished([shuffled, other], ['D', null], { shuffleOptions: true }), 'sample');
+
+  // Stored compactly: ids and letters, not question text.
+  assert.ok(!JSON.stringify(rec).includes('Which layer?'));
+  assert.deepEqual(plain(app.attemptSummary(rec)), { total: 2, correct: 1, skipped: 1, score: 50 });
+
+  const t = app.restoreAttempt(JSON.parse(JSON.stringify(rec)));
+  assert.equal(t.fromHistory, true);
+  assert.deepEqual(plain(t.answers), ['D', null]);
+  assert.deepEqual(plain(t.questions[0].options), plain(shuffled.options));
+  assert.equal(t.questions[0].answer, 'D');
+  assert.equal(t.questions[0].options.D, 'Two');
+  assert.equal(t.questions[1], other);
+  assert.equal(t.endedAt - t.startedAt, 60000);
+});
+
+test('restoreAttempt keeps the score for questions that left or changed in the bank', () => {
+  const base = app.normalize(raw(), 'f', 0);
+  const gone = app.normalize(raw({ id: 'X-D2-009' }), 'f', 1);
+  app.state.questions = [base, gone];
+  const rec = app.attemptRecord(finished([base, gone], ['B', 'A']), 'sample');
+
+  app.state.questions = [app.normalize(raw({ correct_option: 'C' }), 'f', 0)];
+  const t = app.restoreAttempt(rec);
+  assert.ok(t.questions.every((q) => q.unavailable));
+  assert.deepEqual(plain(t.questions.map((q) => q.answer)), ['B', 'B']);
+  assert.equal(t.questions[1].domainKey, 'D2');
+  assert.deepEqual(plain(t.answers), ['B', 'A']);
+});
+
+test('restoreAttempt treats a stored order that no longer fits as unavailable', () => {
+  const base = app.normalize(raw(), 'f', 0);
+  app.state.questions = [base];
+  const rec = app.attemptRecord(finished([app.shuffleOptions(base, ['A', 'B', 'C', 'D', 'E'])], ['B']), 'sample');
+  assert.equal(app.restoreAttempt(rec).questions[0].unavailable, true);
+});
+
+test('recordAttempt keeps only the most recent attempts', () => {
+  const base = app.normalize(raw(), 'f', 0);
+  app.state.exam = { id: 'sample', domains: [] };
+  app.state.attempts = [];
+  for (let i = 0; i < app.MAX_ATTEMPTS + 5; i++) app.recordAttempt(finished([base], ['B'], { endedAt: i }));
+  assert.equal(app.state.attempts.length, app.MAX_ATTEMPTS);
+  assert.equal(app.state.attempts[0].endedAt, 5);
+  assert.equal(app.state.attempts.at(-1).examId, 'sample');
+});
+
 /* ---------- Priority and picking ---------- */
 
 test('prefer-unseen ranks fewer views, then older views, first', () => {

@@ -99,6 +99,13 @@ Then open <http://localhost:47823>. On Windows the command is usually `python` r
 - A full review of every question showing your answer, the correct answer, and explanations for all options. It can be filtered to *All*, *Incorrect* or *Unanswered*.
 - *Retake same questions* and *Practice the missed* buttons.
 
+**Test history**
+- Every finished test is saved. Open **Test history** from the setup or results screen to see each attempt for the current exam: when it finished, how it started (new test, retake or missed practice), score and time.
+- Summary stats (tests taken, average, best, average of the last 5) and a per-domain score across all your tests.
+- **Review** reopens any past test in the full results view, with the same answer order it had. You can retake it or practise its missed questions from there.
+- Attempts store question ids and letters only, and are rebuilt from the current bank when you open them. A question that has since been removed, or whose answer changed, still counts toward the score but is shown as unavailable and left out of retakes.
+- The last 100 finished tests are kept. **Clear test history** deletes them for the current exam.
+
 **General**
 - Light and dark themes. The default follows your OS setting, and the toggle in the header overrides it.
 - Keyboard shortcuts:
@@ -287,9 +294,11 @@ Everything stays in your browser's `localStorage`, scoped to the server's origin
 |---|---|
 | `mcq.settings` | Last-used setup options, the selected exam, and custom weights for each exam |
 | `mcq.history` | Per-question `seen`, `wrong`, `lastWrong`, `last` (timestamp) |
+| `mcq.attempts` | Test history: the last 100 finished tests, each with its exam, timings, options and per-question id, domain, chosen and correct letter (and option order when shuffled) |
 | `mcq.theme` | `light` or `dark` |
 
-- **Reset history** on the setup screen clears `mcq.history`.
+- **Reset history** on the setup screen clears `mcq.history`; your test history is kept.
+- **Clear test history** on the Test history screen removes the current exam's entries from `mcq.attempts`.
 - Because storage is per origin, using a different port (for example, `start.bat 8080`) starts with empty settings and history.
 - Clearing your browser's site data for `localhost` resets everything.
 - The [online version](https://carpf1sh.github.io/multiple-choice-generator/) keeps its own separate settings and history, stored under `carpf1sh.github.io`.
@@ -320,7 +329,7 @@ python -m unittest discover -s tests
 
 | File | Covers |
 |---|---|
-| `tests/app.test.js` | Question validation and escaping, the largest-remainder split and shortfall redistribution, history priority, subtopic round-robin, and answer shuffling. `tests/load-app.js` loads `app.js` unchanged into a minimal fake browser. |
+| `tests/app.test.js` | Question validation and escaping, the largest-remainder split and shortfall redistribution, history priority, subtopic round-robin, answer shuffling, and saving and restoring test history. `tests/load-app.js` loads `app.js` unchanged into a minimal fake browser. |
 | `tests/repo.test.js` | Every exam in `exams.json` and every question in its bank is valid, has a unique id and a known domain. The app references no external hosts. |
 | `tests/test_server.py` | `server.pyw` refuses foreign `Host` headers, never serves dotfiles (including encoded paths), doesn't list folders, and stays inside its folder. |
 
