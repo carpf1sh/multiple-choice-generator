@@ -1,0 +1,11 @@
+# The app has no package dependencies; the only third-party code is the
+# GitHub Actions used by the workflows, pinned to commit SHAs.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ['*']

@@ -1,5 +1,7 @@
 # Practice Test App
 
+[![CI](https://github.com/carpf1sh/multiple-choice-generator/actions/workflows/ci.yml/badge.svg)](https://github.com/carpf1sh/multiple-choice-generator/actions/workflows/ci.yml) [![CodeQL](https://github.com/carpf1sh/multiple-choice-generator/actions/workflows/codeql.yml/badge.svg)](https://github.com/carpf1sh/multiple-choice-generator/actions/workflows/codeql.yml)
+
 A local, browser-based multiple-choice practice test generator. It builds tests of 1–200 questions from JSON question banks, weighted to match an exam's domain distribution and spread across subtopics. It picks up new question batches automatically as they're added to a manifest, so it pairs well with a separate system that keeps generating questions.
 
 - **Runs entirely on your machine.** No accounts, API keys, AI/LLM calls or internet access. Question selection is plain, deterministic JavaScript.
@@ -22,6 +24,7 @@ A local, browser-based multiple-choice practice test generator. It builds tests 
 - [Architecture](#architecture)
 - [Data storage and privacy](#data-storage-and-privacy)
 - [Keeping private question banks out of git](#keeping-private-question-banks-out-of-git)
+- [Testing](#testing)
 - [Troubleshooting](#troubleshooting)
 - [License](#license)
 
@@ -120,6 +123,8 @@ Then open <http://localhost:47823>. On Windows the command is usually `python` r
 ├── start.bat             Windows launcher; runs the local server in the background
 ├── stop.bat              Stops the background server
 ├── server.pyw            Windowless static server used by start.bat
+├── tests/                Node and Python tests (see Testing)
+├── .github/              CI, CodeQL and Dependabot configuration
 └── samples/
     ├── sample_manifest.json
     ├── sample_bank_v1.json
@@ -298,6 +303,29 @@ For licensed or proprietary material you don't want in the repository:
 The app loads both registries, so private and shared exams appear together locally, while only the shared ones are committed.
 
 If your files have to live somewhere else (for example, because a generator writes to fixed paths), add their names to `.git/info/exclude`. It works like `.gitignore` but is never committed, so even the file names stay private.
+
+---
+
+## Testing
+
+The tests use only the built-in runners, so there is still nothing to install beyond Node.js (22 or newer) and Python. Node is needed only to run the tests, not the app.
+
+```bash
+node --test
+python -m unittest discover -s tests
+```
+
+| File | Covers |
+|---|---|
+| `tests/app.test.js` | Question validation and escaping, the largest-remainder split and shortfall redistribution, history priority, subtopic round-robin, and answer shuffling. `tests/load-app.js` loads `app.js` unchanged into a minimal fake browser. |
+| `tests/repo.test.js` | Every exam in `exams.json` and every question in its bank is valid, has a unique id and a known domain. The app references no external hosts. |
+| `tests/test_server.py` | `server.pyw` refuses foreign `Host` headers, never serves dotfiles (including encoded paths), doesn't list folders, and stays inside its folder. |
+
+**Automation** (GitHub Actions, in `.github/`):
+
+- **CI** runs both test suites on Ubuntu and Windows for every push to `main` and every pull request, and fails if anything in `private/` or `exams.local.json` is committed.
+- **CodeQL** scans the JavaScript, Python and workflow files with the `security-extended` queries on every push and pull request, and weekly.
+- **Dependabot** keeps the workflow actions up to date. They're pinned to commit SHAs so a moved tag can't change what runs.
 
 ---
 
