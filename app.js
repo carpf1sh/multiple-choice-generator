@@ -924,8 +924,8 @@ async function init() {
   if (location.protocol === 'file:') {
     renderFatal('Start the local server', `
       <p>Browsers don't let a page opened from disk read the question bank files.</p>
-      <p>Double-click <b>start.bat</b> in this folder (or run <code>python -m http.server 8000</code>) and open
-      <a href="http://localhost:8000">http://localhost:8000</a>.</p>`);
+      <p>Double-click <b>start.bat</b> in this folder (or run <code>python -m http.server 47823</code>) and open
+      <a href="http://localhost:47823">http://localhost:47823</a>.</p>`);
     return;
   }
 

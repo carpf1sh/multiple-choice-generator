@@ -50,20 +50,20 @@ Browsers block pages opened straight from disk (`file://…`) from reading other
 Double-click **`start.bat`**. It:
 
 1. Checks that Python is on your `PATH`.
-2. Serves the folder at `http://localhost:8000`, bound to `127.0.0.1` so it isn't reachable from other machines.
+2. Serves the folder at `http://localhost:47823` in the background with `pythonw` and `server.pyw`, so no console window stays open. It's bound to `127.0.0.1` so it isn't reachable from other machines. It first stops any server an earlier run left on that port.
 3. Opens your default browser.
 
-To use another port, run `start.bat 8080`. Stop the server with **Ctrl+C** in its window, or by closing the window.
+To use another port, run `start.bat 8080`. The server keeps running after you close the browser; double-click **`stop.bat`** to shut it down (or `stop.bat 8080` for another port).
 
 ### macOS / Linux (or Windows without the batch file)
 
 From the project folder:
 
 ```bash
-python3 -m http.server 8000 --bind 127.0.0.1
+python3 -m http.server 47823 --bind 127.0.0.1
 ```
 
-Then open <http://localhost:8000>. On Windows the command is usually `python` rather than `python3`.
+Then open <http://localhost:47823>. On Windows the command is usually `python` rather than `python3`.
 
 ---
 
@@ -114,7 +114,9 @@ Then open <http://localhost:8000>. On Windows the command is usually `python` ra
 ├── app.js                Loading, validation, selection engine, UI for all three screens
 ├── exams.json            Shared exam registry (committed)
 ├── exams.local.json      Optional private exam registry (git-ignored, you create it)
-├── start.bat             Windows launcher for the local server
+├── start.bat             Windows launcher; runs the local server in the background
+├── stop.bat              Stops the background server
+├── server.pyw            Windowless static server used by start.bat
 └── samples/
     ├── sample_manifest.json
     ├── sample_bank_v1.json
@@ -300,9 +302,9 @@ If your files have to live somewhere else (for example, because a generator writ
 
 | Symptom | Fix |
 |---|---|
-| "Start the local server" message | You opened `index.html` from disk. Run `start.bat` or the Python command and go to `http://localhost:8000`. |
+| "Start the local server" message | You opened `index.html` from disk. Run `start.bat` or the Python command and go to `http://localhost:47823`. |
 | `Python was not found on PATH` | Install Python 3 from [python.org](https://www.python.org/downloads/) and tick **Add python.exe to PATH**, or run the command with the full path to `python.exe`. |
-| `OSError: [Errno 98/10048] Address already in use` | Another program is using port 8000. Run `start.bat 8080` (or another port). |
+| Browser can't connect, or "Failed to fetch" | Another program may be using port 47823. Run `start.bat 8080` (or another port). If you run the Python command yourself, this shows as `OSError: [Errno 98/10048] Address already in use`. |
 | New batch doesn't appear | Make sure it's listed under `batches` in the manifest and that `file_name` is relative to the manifest's folder, then click **Reload bank**. |
 | "Heads up" warnings on the setup screen | A batch failed to load (missing file or invalid JSON), or questions were skipped, duplicated or had an unknown domain. The message names the file. |
 | A domain shows as short | The bank has fewer questions in that domain than its weight calls for. The app fills the gap from other domains; add more questions for that domain to fix it. |
