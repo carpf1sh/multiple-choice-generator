@@ -66,3 +66,23 @@ test('the app references no external hosts', () => {
     assert.doesNotMatch(text, /@import\s+url\(\s*['"]?\/\//, `${file} imports a protocol-relative URL`);
   }
 });
+
+test('the Pages site publishes every page, script and stylesheet the pages load', () => {
+  // GitHub Pages only gets the files the workflow copies, so a new file that's
+  // missing from that list works locally but leaves the online site broken.
+  const workflow = fs.readFileSync(path.join(ROOT, '.github/workflows/pages.yml'), 'utf8');
+  const published = new Set();
+  for (const [, args] of workflow.matchAll(/^\s*cp (?:-r )?(.+?) _site\/\s*$/gm)) {
+    for (const name of args.trim().split(/\s+/)) published.add(name);
+  }
+  assert.ok(published.has('index.html'), 'pages.yml copies no index.html');
+  const isPublished = (rel) => published.has(rel) || [...published].some((p) => rel.startsWith(`${p}/`));
+
+  const pages = [...published].filter((f) => /\.(html|js)$/.test(f));
+  for (const file of pages) {
+    const text = fs.readFileSync(path.join(ROOT, file), 'utf8');
+    for (const [, ref] of text.matchAll(/(?:src|href)="([^"#?:]+\.(?:html|js|css))"/g)) {
+      assert.ok(isPublished(ref), `${file} loads ${ref}, which pages.yml doesn't publish`);
+    }
+  }
+});
