@@ -60,10 +60,12 @@ To use another port, run `start.bat 8080`. The server keeps running after you cl
 From the project folder:
 
 ```bash
-python3 -m http.server 47823 --bind 127.0.0.1
+python3 server.pyw 47823
 ```
 
 Then open <http://localhost:47823>. On Windows the command is usually `python` rather than `python3`.
+
+`python3 -m http.server 47823 --bind 127.0.0.1` also works, but it lacks the protections in `server.pyw` (see [Architecture](#architecture)): it serves `.git/` and lists folders to any page that reaches it.
 
 ---
 
@@ -217,11 +219,11 @@ Each batch file is a JSON array of questions, or `{ "questions": [...] }`.
 | `subtopic` | recommended | `topic` | Used to spread questions within a domain. Defaults to `General`. |
 | `objective` | optional | none | An outline objective such as `"3.2"`. When present, picks are spread across objectives first, then subtopics. |
 | `scenario_stem` | yes | `question`, `stem` | The question text. Line breaks are preserved. |
-| `options` | yes | an array, lettered A, B, C… in order | 2–10 options. Keys are treated case-insensitively. |
+| `options` | yes | an array, lettered A, B, C… in order | 2–10 options. Keys must be single letters `A`–`J` and are treated case-insensitively. |
 | `correct_option` | yes | `answer` | Must be one of the option letters. |
 | `explanation` | optional | a plain string | `correct` is shown for the right answer; `distractors[letter]` explains why each wrong option is wrong. |
 
-**Validation:** a question missing its stem or options, with fewer than 2 options, or whose answer isn't one of the option letters is skipped. A warning on the setup screen gives the count per file. Duplicate `id`s across batches are reported, and the **last** batch listed in the manifest wins. Questions whose domain doesn't match the registry are also reported and left out.
+**Validation:** a question missing its stem or options, with fewer than 2 options, with an option key that isn't a single letter `A`–`J`, or whose answer isn't one of the option letters is skipped. A warning on the setup screen gives the count per file. Duplicate `id`s across batches are reported, and the **last** batch listed in the manifest wins. Questions whose domain doesn't match the registry are also reported and left out.
 
 ---
 
@@ -265,7 +267,7 @@ init()
 
 **State:** one in-memory `state` object holds the loaded exams, the normalised questions, settings, history and the current test. Settings and history are kept in sync with `localStorage`; a test in progress is not saved.
 
-**Security:** all text that comes from question files is HTML-escaped before rendering. The server is bound to `127.0.0.1`, and the app makes no requests outside the local server.
+**Security:** all text that comes from question files is HTML-escaped before rendering, and option keys must be single letters. The server is bound to `127.0.0.1`. Because a web page can still reach it through DNS rebinding, `server.pyw` also refuses requests whose `Host` isn't `localhost` or `127.0.0.1`, never serves dotfiles such as `.git/`, and doesn't list folders. The app makes no requests outside the local server.
 
 ---
 

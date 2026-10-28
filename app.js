@@ -137,8 +137,9 @@ function normalize(item, file, index) {
       .filter(([, v]) => v != null && String(v).trim())
       .map(([k, v]) => [String(k).trim().toUpperCase(), String(v)])
   );
+  // Keys are rendered as markup, so only single letters A–J are accepted.
   const letters = Object.keys(options).sort();
-  if (letters.length < 2) return null;
+  if (letters.length < 2 || !letters.every((L) => L.length === 1 && LETTERS.includes(L))) return null;
 
   const answer = String(item.correct_option ?? item.answer ?? '').trim().toUpperCase();
   if (!letters.includes(answer)) return null;
