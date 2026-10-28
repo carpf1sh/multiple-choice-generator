@@ -20,7 +20,7 @@ const DEFAULT_SETTINGS = {
   allowSkip: true,
   feedback: 'immediate',  // immediate | end
   order: 'shuffle',       // shuffle | grouped
-  shuffleOptions: false,
+  shuffleOptions: true,
 };
 
 /* ---------- Storage (never throws; app works without it) ---------- */
