@@ -42,9 +42,14 @@ function slugify(name) {
     .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40).replace(/-+$/, '');
 }
 
-// A batch file is a bare array of questions or { questions: [...] }.
-const questionsOf = (data) => (Array.isArray(data) ? data : (data && Array.isArray(data.questions) ? data.questions : []));
-const withQuestions = (data, list) => (data && !Array.isArray(data) && typeof data === 'object' ? { ...data, questions: list } : list);
+// Puts the list back the way the batch file holds it (see questionsOf), and
+// keeps the file's own item_count right when it has one.
+function withQuestions(data, list) {
+  if (!data || Array.isArray(data) || typeof data !== 'object') return list;
+  const out = { ...data, [questionsKeyOf(data) || 'questions']: list };
+  if ('item_count' in data) out.item_count = list.length;
+  return out;
+}
 
 // Next free id like SAMPLE-D2-007. The domain is read from -D<n>- in the id
 // first, so a prefix that would confuse that falls back to "Q".
@@ -130,15 +135,21 @@ function countQuestions(batches) {
   return ids.size;
 }
 
-// Sets the batch's item_count (listing the batch if it's new) and the
-// manifest's total_questions, when it has one. Other fields are kept.
+// Sets the batch's item_count (listing the batch if it's new) in every batch
+// list the manifest has ("batches", "sets"), and the manifest's
+// total_questions and total_sets, when it has them. Other fields are kept.
 function updateManifestCounts(manifest, file, itemCount, total) {
-  const batches = (manifest.batches || []).slice();
-  const i = batches.findIndex((b) => b && b.file_name === file);
-  if (i < 0) batches.push({ batch_id: file.replace(/\.json$/i, ''), file_name: file, item_count: itemCount });
-  else batches[i] = { ...batches[i], item_count: itemCount };
-  const out = { ...manifest, batches };
+  const out = { ...manifest };
+  const keys = BATCH_KEYS.filter((k) => Array.isArray(manifest[k]));
+  for (const key of keys.length ? keys : ['batches']) {
+    const batches = (manifest[key] || []).slice();
+    const i = batches.findIndex((b) => b && b.file_name === file);
+    if (i < 0) batches.push({ batch_id: file.replace(/\.json$/i, ''), file_name: file, item_count: itemCount });
+    else batches[i] = { ...batches[i], item_count: itemCount };
+    out[key] = batches;
+  }
   if ('total_questions' in manifest) out.total_questions = total;
+  if ('total_sets' in manifest) out.total_sets = batchesOf(out).length;
   return out;
 }
 
@@ -261,7 +272,7 @@ async function loadBank(exam) {
     bank.warnings.push(`Could not load manifest "${exam.manifest}": ${e.message}`);
     return bank;
   }
-  const files = (manifest.batches || []).map((b) => b && b.file_name).filter(Boolean);
+  const files = batchesOf(manifest).map((b) => b && b.file_name).filter(Boolean);
   const results = await Promise.allSettled(files.map((f) => fetchJson(bank.base + f)));
   results.forEach((r, i) => {
     const file = files[i];
@@ -766,7 +777,7 @@ async function saveQuestion(button) {
   try {
     // Re-read the files so changes made since the page loaded aren't lost.
     const manifest = await fetchJson(exam.manifest);
-    const listed = (manifest.batches || []).some((b) => b && b.file_name === file);
+    const listed = batchesOf(manifest).some((b) => b && b.file_name === file);
     let data = [];
     try { data = await fetchJson(bank.base + file); } catch (e) { if (entry || listed) throw e; }
     await saveFiles(bankWrite(bank, manifest, file, upsertQuestion(data, raw, entry ? entry.q.id : null, file)));

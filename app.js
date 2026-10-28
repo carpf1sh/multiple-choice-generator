@@ -121,7 +121,7 @@ async function loadExam(exam) {
   }
 
   const base = exam.manifest.includes('/') ? exam.manifest.slice(0, exam.manifest.lastIndexOf('/') + 1) : '';
-  const files = (manifest.batches || []).map((b) => b && b.file_name).filter(Boolean);
+  const files = batchesOf(manifest).map((b) => b && b.file_name).filter(Boolean);
   if (!files.length) state.warnings.push('The manifest does not list any batches.');
 
   const results = await Promise.allSettled(files.map((f) => fetchJson(base + f)));
@@ -135,7 +135,7 @@ async function loadExam(exam) {
       state.batches.push({ file, count: 0, error: true });
       return;
     }
-    const raw = Array.isArray(r.value) ? r.value : (r.value && r.value.questions) || [];
+    const raw = questionsOf(r.value);
     let ok = 0, bad = 0;
     raw.forEach((item, idx) => {
       const q = normalize(item, file, idx);

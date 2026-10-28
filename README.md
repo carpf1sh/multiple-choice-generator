@@ -120,7 +120,7 @@ Click **Manage tests** on the setup screen (or open `/manage.html`). Changes are
 - **Add a question**: domain, subtopic, objective, question text, 2–10 options with the correct one selected, an explanation, and an optional "why it's wrong" note per option. New questions get the next free id such as `SAMPLE-D2-011` and go into `<manifest name>_added.json` next to the manifest, which is created and added to the manifest the first time.
 - **Edit a question** to reword it or its answers, add or remove options, or change the correct answer. It's saved back into the batch file it came from, in the format shown under [Question format](#question-format). Alternative field names are rewritten to the standard ones, and fields the app doesn't use are kept.
 - **Remove a question** from its batch file.
-- Each save re-reads the batch file and manifest first, so changes made by a question generator since the page loaded aren't lost. The manifest's `item_count` and `total_questions` are kept up to date.
+- Each save re-reads the batch file and manifest first, so changes made by a question generator since the page loaded aren't lost. The manifest's `item_count`, `total_questions` and `total_sets` (and a batch file's own `item_count`) are kept up to date.
 - A question's domain comes from `-D<n>-` in its id when it has one, so the domain of such a question can't be changed here.
 - Rewording keeps a question's history. Changing its correct answer or its number of options means past tests that included it show it as changed and leave it out of retakes (see *Test history*).
 
@@ -213,7 +213,7 @@ The file may be `{ "exams": [...] }` or a bare array. If **`exams.local.json`** 
 
 ### Manifest
 
-The manifest lists the batch files in an exam's bank. Your question generator owns this file; the app only reads `batches[].file_name`.
+The manifest lists the batch files in an exam's bank. Your question generator owns this file; the app only reads `batches[].file_name` (or `sets[].file_name` when there's no `batches` list).
 
 ```json
 {
@@ -233,7 +233,7 @@ The manifest lists the batch files in an exam's bank. Your question generator ow
 
 ### Question format
 
-Each batch file is a JSON array of questions, or `{ "questions": [...] }`.
+Each batch file is a JSON array of questions, or an object holding them under `questions` or `items` (for example `{ "set_id": "set1", "items": [...] }`). Other fields in that object are ignored.
 
 ```json
 {

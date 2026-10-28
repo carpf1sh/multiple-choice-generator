@@ -127,6 +127,14 @@ test('upsertQuestion replaces by id and keeps the file shape', () => {
   assert.throws(() => m.upsertQuestion(arr, { id: 'Z' }, 'Z', 'f.json'), /no longer in f.json/);
 });
 
+test('batch files holding questions under "items" are read and written in that shape', () => {
+  const sets = { set_id: 'set1', item_count: 1, items: [{ id: 'A' }] };
+  assert.deepEqual(plain(m.questionsOf(sets)), [{ id: 'A' }]);
+  assert.deepEqual(plain(m.upsertQuestion(sets, { id: 'C' }, null, 'f.json')), { set_id: 'set1', item_count: 2, items: [{ id: 'A' }, { id: 'C' }] });
+  assert.deepEqual(plain(m.removeQuestion(sets, 'A', 'f.json')), { set_id: 'set1', item_count: 0, items: [] });
+  assert.deepEqual(plain(m.questionsOf({ title: 'none' })), []);
+});
+
 test('questions without an id are found by their file position', () => {
   const arr = [{ id: 'A' }, { scenario_stem: 'no id' }];
   assert.equal(m.findQuestion(arr, 'f.json#2', 'f.json'), 1);
@@ -143,6 +151,19 @@ test('updateManifestCounts updates counts and lists a new batch', () => {
   const added = plain(m.updateManifestCounts(manifest, 'x_added.json', 1, 3));
   assert.deepEqual(added.batches[1], { batch_id: 'x_added', file_name: 'x_added.json', item_count: 1 });
   assert.ok(!('total_questions' in plain(m.updateManifestCounts({ batches: [] }, 'a.json', 1, 1))));
+});
+
+test('updateManifestCounts keeps "sets" and "batches" lists in step', () => {
+  const entry = { set_id: 's1', batch_id: 's1', file_name: 's1.json', item_count: 2 };
+  const manifest = { total_questions: 2, total_sets: 1, sets: [entry], batches: [entry] };
+  const edited = plain(m.updateManifestCounts(manifest, 's1.json', 1, 1));
+  assert.equal(edited.sets[0].item_count, 1);
+  assert.equal(edited.batches[0].item_count, 1);
+  const added = plain(m.updateManifestCounts(manifest, 'x_added.json', 1, 3));
+  assert.equal(added.sets.length, 2);
+  assert.equal(added.batches.length, 2);
+  assert.equal(added.total_sets, 2);
+  assert.equal(plain(m.updateManifestCounts({ sets: [entry] }, 'x.json', 1, 1)).sets.length, 2);
 });
 
 test('countQuestions counts distinct valid ids across batches', () => {

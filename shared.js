@@ -56,6 +56,19 @@ async function fetchJson(url) {
   try { return await res.json(); } catch { throw new Error('invalid JSON'); }
 }
 
+// A batch file is a bare array of questions, or an object holding them under
+// "questions" or "items".
+const QUESTION_KEYS = ['questions', 'items'];
+const questionsKeyOf = (data) => QUESTION_KEYS.find((k) => Array.isArray(data?.[k]));
+const questionsOf = (data) => (Array.isArray(data) ? data : (data && data[questionsKeyOf(data)]) || []);
+
+// The manifest lists its batch files under "batches" (or "sets").
+const BATCH_KEYS = ['batches', 'sets'];
+const batchesOf = (manifest) => {
+  const key = BATCH_KEYS.find((k) => Array.isArray(manifest?.[k]));
+  return key ? manifest[key] : [];
+};
+
 function domainKeyFor(item, id) {
   const m = /-D(\d+)-/i.exec(id) || /Domain\s+(\d+)/i.exec(String(item.domain || ''));
   return m ? `D${Number(m[1])}` : null;
