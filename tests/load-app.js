@@ -1,8 +1,9 @@
 'use strict';
 
-// Loads app.js into a sandbox with just enough of a browser to boot it, and
-// returns its internal functions and state. location.protocol is 'file:', so
-// init() stops at the "start the server" screen without fetching anything.
+// Loads shared.js plus a page script (app.js or manage.js) into a sandbox with
+// just enough of a browser to boot it, and returns its internal functions and
+// state. location.protocol is 'file:', so init() stops at the "start the
+// server" screen without fetching anything.
 
 const fs = require('node:fs');
 const path = require('node:path');
@@ -17,6 +18,12 @@ const EXPORTS = [
   'MAX_ATTEMPTS', 'attemptRecord', 'recordAttempt', 'attemptSummary', 'restoreAttempt',
 ];
 
+const MANAGE_EXPORTS = [
+  'normalize', 'domainKeyFor', 'slugify', 'nextQuestionId', 'toRawQuestion', 'questionsOf', 'withQuestions',
+  'findQuestion', 'upsertQuestion', 'removeQuestion', 'countQuestions', 'updateManifestCounts', 'addedBatchName',
+  'validateNewTest', 'newExamFiles', 'validateQuestion', 'LIMITS',
+];
+
 function fakeElement() {
   return {
     dataset: {},
@@ -29,7 +36,7 @@ function fakeElement() {
   };
 }
 
-function loadApp() {
+function loadScript(file, exports) {
   const storage = new Map();
   const document = fakeElement();
   document.documentElement = fakeElement();
@@ -51,12 +58,15 @@ function loadApp() {
   sandbox.window.scrollTo = () => {};
   sandbox.confirm = () => true;
 
-  const source = fs.readFileSync(path.join(ROOT, 'app.js'), 'utf8');
+  const source = ['shared.js', file].map((f) => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n;\n');
   vm.createContext(sandbox);
-  vm.runInContext(`${source}\n;globalThis.__app = { ${EXPORTS.join(', ')} };`, sandbox, { filename: 'app.js' });
+  vm.runInContext(`${source}\n;globalThis.__app = { ${exports.join(', ')} };`, sandbox, { filename: file });
   return sandbox.__app;
 }
 
+const loadApp = () => loadScript('app.js', EXPORTS);
+const loadManage = () => loadScript('manage.js', MANAGE_EXPORTS);
+
 const readJson = (rel) => JSON.parse(fs.readFileSync(path.join(ROOT, rel), 'utf8'));
 
-module.exports = { loadApp, readJson, ROOT };
+module.exports = { loadApp, loadManage, readJson, ROOT };
