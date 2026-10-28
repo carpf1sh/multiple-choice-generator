@@ -6,9 +6,10 @@ A local, browser-based multiple-choice practice test generator. It builds tests 
 
 - **Runs entirely on your machine.** No accounts, API keys, AI/LLM calls or internet access. Question selection is plain, deterministic JavaScript.
 - **No build step and no dependencies.** Plain HTML, CSS and JavaScript, served by Python's built-in web server.
+- **Comes with a test manager.** Create tests, add or remove questions and reword them in the browser; changes are saved straight to the JSON files.
 - **Ships with two sample exams.** A 20-question *Computing Fundamentals* bank and a 16-question *Cloud Essentials* bank in [`samples/`](samples/) work out of the box and show how several exams sit side by side.
 
-**Try it online:** <https://carpf1sh.github.io/multiple-choice-generator/> runs the sample exams on GitHub Pages, published from `main` on every push. To use your own question banks, run it locally.
+**Try it online:** <https://carpf1sh.github.io/multiple-choice-generator/> runs the sample exams on GitHub Pages, published from `main` on every push. To use your own question banks or edit tests, run it locally.
 
 ---
 
@@ -106,6 +107,23 @@ Then open <http://localhost:47823>. On Windows the command is usually `python` r
 - Attempts store question ids and letters only, and are rebuilt from the current bank when you open them. A question that has since been removed, or whose answer changed, still counts toward the score but is shown as unavailable and left out of retakes.
 - The last 100 finished tests are kept. **Clear test history** deletes them for the current exam.
 
+**Managing tests**
+
+Click **Manage tests** on the setup screen (or open `/manage.html`). Changes are written to the JSON files on disk through the local server, so the online copy can only browse.
+
+- **Create a test**: name, optional title, an id (suggested from the name), its domains and weights, and where it's stored:
+  - *Private*: added to `exams.local.json`, with its files in `private/`. Both are git-ignored.
+  - *Shared*: added to `exams.json`, with its files in `samples/`. Committed to git.
+
+  The new test gets a manifest (`<id>_manifest.json`) and an empty batch (`<id>_added.json`).
+- **Browse questions** for a test, filtered by domain or searched by text.
+- **Add a question**: domain, subtopic, objective, question text, 2–10 options with the correct one selected, an explanation, and an optional "why it's wrong" note per option. New questions get the next free id such as `SAMPLE-D2-011` and go into `<manifest name>_added.json` next to the manifest, which is created and added to the manifest the first time.
+- **Edit a question** to reword it or its answers, add or remove options, or change the correct answer. It's saved back into the batch file it came from, in the format shown under [Question format](#question-format). Alternative field names are rewritten to the standard ones, and fields the app doesn't use are kept.
+- **Remove a question** from its batch file.
+- Each save re-reads the batch file and manifest first, so changes made by a question generator since the page loaded aren't lost. The manifest's `item_count` and `total_questions` are kept up to date.
+- A question's domain comes from `-D<n>-` in its id when it has one, so the domain of such a question can't be changed here.
+- Rewording keeps a question's history. Changing its correct answer or its number of options means past tests that included it show it as changed and leave it out of retakes (see *Test history*).
+
 **General**
 - Light and dark themes. The default follows your OS setting, and the toggle in the header overrides it.
 - Keyboard shortcuts:
@@ -124,14 +142,17 @@ Then open <http://localhost:47823>. On Windows the command is usually `python` r
 
 ```
 .
-├── index.html            Page shell; applies the saved theme before first paint
+├── index.html            Practice app page; applies the saved theme before first paint
+├── manage.html           Test manager page
 ├── styles.css            All styling; light/dark themes via CSS custom properties
-├── app.js                Loading, validation, selection engine, UI for all three screens
+├── shared.js             Storage, escaping, theme, loading and validating questions (used by both pages)
+├── app.js                Selection engine and UI for the practice screens
+├── manage.js             Test manager: creating tests and editing questions
 ├── exams.json            Shared exam registry (committed)
 ├── exams.local.json      Optional private exam registry (git-ignored, you create it)
 ├── start.bat             Windows launcher; runs the local server in the background
 ├── stop.bat              Stops the background server
-├── server.pyw            Windowless static server used by start.bat
+├── server.pyw            Windowless local server used by start.bat; also saves the test manager's changes
 ├── tests/                Node and Python tests (see Testing)
 ├── .github/              CI, CodeQL, Pages deployment and Dependabot configuration
 └── samples/
@@ -143,7 +164,7 @@ Then open <http://localhost:47823>. On Windows the command is usually `python` r
     └── cloud_bank_v2.json
 ```
 
-The app is a single script with no framework. It renders each screen (**Setup → Test → Results**) by building HTML strings and escaping all question text before inserting it.
+There's no framework. Each page renders its screens (**Setup → Test → Results** in the app; **Tests → Questions → Editor** in the manager) by building HTML strings and escaping all question text before inserting it.
 
 ---
 
@@ -281,11 +302,24 @@ init()
 | `priorityScore`, `orderByPriority` | Selection engine | Ranks questions using local history |
 | `interleave`, `pickFromDomain` | Selection engine | Round-robin across objectives and subtopics |
 | `renderSetup`, `renderTest`, `renderResults` | Screens | Render each screen and bind its events |
-| `store` | Storage | `localStorage` wrapper that never throws, so the app still works when storage is blocked |
+| `store` | Storage (`shared.js`) | `localStorage` wrapper that never throws, so the app still works when storage is blocked |
+| `toRawQuestion`, `upsertQuestion`, `removeQuestion`, `updateManifestCounts`, `newExamFiles` | `manage.js` | Turn the editor's changes into updated batch, manifest and registry files |
 
 **State:** one in-memory `state` object holds the loaded exams, the normalised questions, settings, history and the current test. Settings and history are kept in sync with `localStorage`; a test in progress is not saved.
 
-**Security:** all text that comes from question files is HTML-escaped before rendering, and option keys must be single letters. The server is bound to `127.0.0.1`. Because a web page can still reach it through DNS rebinding, `server.pyw` also refuses requests whose `Host` isn't `localhost` or `127.0.0.1`, never serves dotfiles such as `.git/`, and doesn't list folders. The app makes no requests outside the local server.
+**Saving:** `server.pyw` has two endpoints for the test manager. `GET /api/status` tells the manager it can save; on GitHub Pages or `python -m http.server` it's missing, and the manager is read-only. `POST /api/files` takes `{"files": [{"path": "...", "data": ...}]}` and writes each file as formatted JSON (via a temporary file, so a file is never half-written). It checks every path before writing any.
+
+**Security:** all text that comes from question files is HTML-escaped before rendering, and option keys must be single letters. The server is bound to `127.0.0.1`. Because a web page can still reach it through DNS rebinding, `server.pyw` also refuses requests whose `Host` isn't `localhost` or `127.0.0.1`, never serves dotfiles such as `.git/`, and doesn't list folders. Saving additionally requires:
+
+- an `Origin` of `http://localhost:<port>` or `http://127.0.0.1:<port>`, so other websites can't post to it;
+- `Content-Type: application/json` and a body of at most 5 MB;
+- paths that are relative `.json` files with no `..` or dot-segments, and that are `exams.json`, `exams.local.json`, or inside `samples/`, `private/` or the folder of a registered manifest. Nothing else in the project, such as the app's own code, can be overwritten. Names Windows would refuse or quietly change (`CON`, `NUL`, trailing spaces or dots, `<>:"|?*`) are refused too, and each file may be listed only once;
+- valid JSON without `NaN` or `Infinity`, which browsers can't read;
+- for `exams.json` and `exams.local.json`, a registry the app can load: unique exam ids, a name, a relative `.json` manifest path, and domains with unique `D<n>` keys, names and weights above 0.
+
+The test manager checks its forms before saving: names, ids and texts have length limits, domain names and answer options must be distinct, weights must be numbers above 0 and at most 1000, and a question's domain must belong to its test.
+
+The app makes no requests outside the local server.
 
 ---
 
@@ -332,9 +366,10 @@ python -m unittest discover -s tests
 
 | File | Covers |
 |---|---|
-| `tests/app.test.js` | Question validation and escaping, the largest-remainder split and shortfall redistribution, history priority, subtopic round-robin, answer shuffling, and saving and restoring test history. `tests/load-app.js` loads `app.js` unchanged into a minimal fake browser. |
+| `tests/app.test.js` | Question validation and escaping, the largest-remainder split and shortfall redistribution, history priority, subtopic round-robin, answer shuffling, and saving and restoring test history. `tests/load-app.js` loads `shared.js` and `app.js` (or `manage.js`) unchanged into a minimal fake browser. |
+| `tests/manage.test.js` | The test manager's file changes: questions built from the editor pass validation and keep unknown fields, batch files keep their shape, ids continue the numbering, manifest counts stay right, and new tests produce valid registry, manifest and batch files. |
 | `tests/repo.test.js` | Every exam in `exams.json` and every question in its bank is valid, has a unique id and a known domain. The app references no external hosts. |
-| `tests/test_server.py` | `server.pyw` refuses foreign `Host` headers, never serves dotfiles (including encoded paths), doesn't list folders, and stays inside its folder. |
+| `tests/test_server.py` | `server.pyw` refuses foreign `Host` headers, never serves dotfiles (including encoded paths), doesn't list folders, and stays inside its folder. Saving works in the allowed places and is refused for foreign hosts or origins, wrong content types, oversized bodies, traversal, dotfiles, non-JSON files and other folders, without writing anything. |
 
 **Automation** (GitHub Actions, in `.github/`):
 
@@ -354,6 +389,7 @@ python -m unittest discover -s tests
 | New batch doesn't appear | Make sure it's listed under `batches` in the manifest and that `file_name` is relative to the manifest's folder, then click **Reload bank**. |
 | "Heads up" warnings on the setup screen | A batch failed to load (missing file or invalid JSON), or questions were skipped, duplicated or had an unknown domain. The message names the file. |
 | A domain shows as short | The bank has fewer questions in that domain than its weight calls for. The app fills the gap from other domains; add more questions for that domain to fix it. |
+| The test manager says editing needs the local server | You're on the online copy or started the server with `python -m http.server`. Run `start.bat` or `python server.pyw` and open `http://localhost:47823/manage.html`. |
 | Settings or history seem lost | You're probably on a different port or browser profile, or site data was cleared. See [Data storage](#data-storage-and-privacy). |
 
 ---

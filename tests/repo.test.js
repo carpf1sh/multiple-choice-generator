@@ -58,7 +58,7 @@ for (const exam of exams) {
 test('the app references no external hosts', () => {
   // XML namespaces are identifiers, not requests.
   const allowed = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)|^http:\/\/www\.w3\.org\//;
-  for (const file of ['app.js', 'index.html', 'styles.css']) {
+  for (const file of ['shared.js', 'app.js', 'index.html', 'manage.js', 'manage.html', 'styles.css']) {
     const text = fs.readFileSync(path.join(ROOT, file), 'utf8');
     for (const [url] of text.matchAll(/https?:\/\/[^\s'"`)<>]+/g)) {
       assert.match(url, allowed, `${file} references ${url}`);
