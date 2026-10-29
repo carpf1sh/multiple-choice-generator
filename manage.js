@@ -457,7 +457,7 @@ function renderList() {
       <td class="num">${state.banks[e.id]?.entries.length ?? '–'}</td>
       <td class="row-actions"><div>
         <button class="btn btn-xs" type="button" data-open="${esc(e.id)}">Open</button>
-        ${state.writable ? `<button class="btn btn-xs" type="button" data-delete="${esc(e.id)}">${ICONS.trash}Delete</button>` : ''}
+        ${state.writable ? `<button class="btn btn-xs btn-danger" type="button" data-delete="${esc(e.id)}">${ICONS.trash}Delete</button>` : ''}
       </div></td>
     </tr>`).join('');
 
@@ -692,7 +692,7 @@ function renderExam() {
           <button class="btn btn-sm" id="to-list" type="button">← All tests</button>
           <button class="btn btn-sm" id="upload" type="button" ${exam.domains.length ? '' : 'disabled'}>Upload questions</button>
           <button class="btn btn-primary btn-sm" id="add-question" type="button" ${state.writable && exam.domains.length ? '' : 'disabled'}>+ Add question</button>
-          ${state.writable ? `<button class="btn btn-sm" id="delete-test" type="button">${ICONS.trash}Delete test</button>` : ''}
+          ${state.writable ? `<button class="btn btn-sm btn-danger" id="delete-test" type="button">${ICONS.trash}Delete test</button>` : ''}
         </div>
       </div>
       <div class="stat-line">
