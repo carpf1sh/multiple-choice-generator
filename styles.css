@@ -113,6 +113,8 @@ p { margin: 0 0 .75rem; }
 .btn:disabled { opacity: .45; cursor: not-allowed; }
 .btn-primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
 .btn-primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
+.btn-danger { background: var(--bad); border-color: var(--bad); color: var(--surface); }
+.btn-danger:hover:not(:disabled) { background: var(--bad); filter: brightness(.9); }
 .btn-ghost { background: transparent; border-color: transparent; }
 .btn-lg { padding: .75rem 1.5rem; font-size: 1.05rem; }
 .btn-sm { padding: .3rem .65rem; font-size: .85rem; }
