@@ -21,7 +21,7 @@ const EXPORTS = [
 const MANAGE_EXPORTS = [
   'normalize', 'domainKeyFor', 'slugify', 'nextQuestionId', 'toRawQuestion', 'questionsOf', 'withQuestions',
   'findQuestion', 'upsertQuestion', 'removeQuestion', 'countQuestions', 'updateManifestCounts', 'addedBatchName',
-  'validateNewTest', 'newExamFiles', 'removeExam', 'validateQuestion', 'LIMITS',
+  'validateNewTest', 'newExamEntry', 'newExamFiles', 'removeExam', 'validateQuestion', 'LIMITS',
   'uploadTemplate', 'checkUpload', 'uploadBatchName', 'uploadManifest',
 ];
 
