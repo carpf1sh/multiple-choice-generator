@@ -271,27 +271,39 @@ function validateNewTest(t, exams) {
   return '';
 }
 
-// The files a new test needs: its registry entry, a manifest, and an empty batch.
-// registry is the current registry file's contents, or null if it doesn't exist.
-function newExamFiles(t, registry) {
+// The registry entry the new-test form describes.
+function newExamEntry(t) {
   const dir = t.shared ? 'samples' : 'private';
-  const manifestPath = `${dir}/${t.id}_manifest.json`;
-  const batch = addedBatchName(manifestPath);
-  const exam = {
+  return {
     id: t.id,
     name: t.name.trim(),
     ...(t.title.trim() ? { title: t.title.trim() } : {}),
-    manifest: manifestPath,
+    manifest: `${dir}/${t.id}_manifest.json`,
     domains: t.domains.map((d, i) => ({ key: `D${i + 1}`, name: d.name.trim(), weight: Number(d.weight) })),
   };
+}
+
+// The files a new test needs: its registry entry, a manifest, and its first batch.
+// registry is the current registry file's contents, or null if it doesn't exist.
+// upload ({ file, data }, already passed through checkUpload) becomes the first
+// batch; without one the test starts with an empty <id>_added.json.
+function newExamFiles(t, registry, upload = null) {
+  const exam = newExamEntry(t);
+  const batch = upload ? upload.file : addedBatchName(exam.manifest);
+  const data = upload ? upload.data : [];
   const exams = Array.isArray(registry) ? registry : (registry && registry.exams) || [];
   const nextRegistry = Array.isArray(registry) ? [...exams, exam] : { ...(registry || {}), exams: [...exams, exam] };
+  const manifest = {
+    manifest_version: '1.0',
+    total_questions: countQuestions([{ file: batch, data }]),
+    batches: [{ batch_id: batch.replace(/\.json$/i, ''), file_name: batch, item_count: questionsOf(data).length }],
+  };
   return {
     exam,
     files: [
       { path: t.shared ? 'exams.json' : 'exams.local.json', data: nextRegistry },
-      { path: manifestPath, data: { manifest_version: '1.0', total_questions: 0, batches: [{ batch_id: batch.replace(/\.json$/, ''), file_name: batch, item_count: 0 }] } },
-      { path: `${dir}/${batch}`, data: [] },
+      { path: exam.manifest, data: manifest },
+      { path: dirOf(exam.manifest) + batch, data },
     ],
   };
 }
@@ -455,7 +467,7 @@ function renderList() {
     </section>`;
 
   $('#new-test').addEventListener('click', () => {
-    state.newTest = { name: '', title: '', id: '', idEdited: false, domains: [{ name: '', weight: 1 }], shared: false };
+    state.newTest = { name: '', title: '', id: '', idEdited: false, domains: [{ name: '', weight: 1 }], shared: false, upload: null };
     renderNewTest();
   });
   app().querySelectorAll('[data-open]').forEach((b) => b.addEventListener('click', () => {
@@ -468,9 +480,16 @@ function renderList() {
 
 /* ---------- New test ---------- */
 
+// The uploaded first batch is checked against the domains as they are now.
+function checkNewTestUpload() {
+  const t = state.newTest;
+  if (t.upload && t.upload.data !== null) t.upload.result = checkUpload(t.upload.data, newExamEntry(t), [], 'append');
+}
+
 function renderNewTest() {
   state.view = 'new';
   const t = state.newTest;
+  checkNewTestUpload();
   const domainRows = t.domains.map((d, i) => `
     <div class="row domain-row">
       <span class="dkey">D${i + 1}</span>
@@ -516,10 +535,22 @@ function renderNewTest() {
           </div>
           <div class="field-help" id="stored-help"></div>
         </div>
+        <div>
+          <span class="field">First questions <span class="muted small">(optional)</span></span>
+          ${dropzoneHtml(t.upload && t.upload.fileName)}
+          <div class="row" style="margin-top:.5rem">
+            <button class="btn btn-sm" id="template" type="button">Download JSON template</button>
+            ${t.upload ? '<button class="btn btn-sm" id="u-clear" type="button">Remove file</button>' : ''}
+          </div>
+          <div class="field-help">Upload a batch to start the test with, in the same format as <b>Upload questions</b>. The template has one example per domain above.
+            Without a file the test starts empty.</div>
+        </div>
+        ${t.upload ? uploadSummary(t.upload.result, 'add') : ''}
         <div id="form-error" class="notice notice-bad" role="alert" hidden></div>
         <div class="row">
           <span class="spacer"></span>
-          <button class="btn btn-primary" id="create-test" type="button">Create test</button>
+          <button class="btn btn-primary" id="create-test" type="button">${t.upload?.result?.questions?.length
+            ? `Create test with ${plural(t.upload.result.questions.length, 'question')}` : 'Create test'}</button>
         </div>
       </div>
     </section>`;
@@ -546,6 +577,17 @@ function renderNewTest() {
   $('#add-domain').addEventListener('click', () => { t.domains.push({ name: '', weight: 1 }); renderNewTest(); });
   app().querySelectorAll('input[name="shared"]').forEach((r) => r.addEventListener('change', () => { t.shared = r.value === 'shared'; storedHelp(); }));
   $('#cancel').addEventListener('click', renderList);
+  $('#template').addEventListener('click', () => {
+    const exam = newExamEntry(t);
+    exam.domains.forEach((d) => { d.name = d.name || 'Domain name'; });
+    downloadTemplate(exam, []);
+  });
+  bindDropzone(async (file) => {
+    t.upload = { fileName: file.name, data: null, result: null };
+    t.upload.data = await readJsonFile(file, t.upload);
+    renderNewTest();
+  });
+  if (t.upload) $('#u-clear').addEventListener('click', () => { t.upload = null; renderNewTest(); });
   $('#create-test').addEventListener('click', (e) => createTest(e.target));
 }
 
@@ -554,24 +596,44 @@ async function createTest(button) {
   const showError = (msg) => { const el = $('#form-error'); el.textContent = msg; el.hidden = !msg; };
   const err = validateNewTest(t, state.exams);
   if (err) return showError(err);
+  checkNewTestUpload();
+  const result = t.upload && t.upload.result;
+  if (t.upload && !result?.questions?.length) {
+    return showError(`None of the questions in ${t.upload.fileName} can be added. Fix the file or remove it.`);
+  }
 
   button.disabled = true;
   button.textContent = 'Creating…';
+  const exists = (path) => fetch(path, { method: 'HEAD', cache: 'no-store' }).then((r) => r.ok, () => false);
   try {
     const registryPath = t.shared ? 'exams.json' : 'exams.local.json';
     let registry = null;
     try { registry = await fetchJson(registryPath); } catch (e) { if (t.shared) throw e; }
-    const { exam, files } = newExamFiles(t, registry);
+    let upload = null;
+    if (result) {
+      // Keep <id>_added.json free for questions added in the editor later.
+      const manifestPath = newExamEntry(t).manifest;
+      const taken = [addedBatchName(manifestPath)];
+      let file = uploadBatchName(t.upload.fileName, taken);
+      while (await exists(dirOf(manifestPath) + file)) {
+        taken.push(file);
+        file = uploadBatchName(t.upload.fileName, taken);
+      }
+      upload = { file, data: withQuestions(t.upload.data, result.questions) };
+    }
+    const { exam, files } = newExamFiles(t, registry, upload);
     for (const f of files.slice(1)) {
-      const exists = await fetch(f.path, { method: 'HEAD', cache: 'no-store' }).then((r) => r.ok, () => false);
-      if (exists) throw new Error(`${f.path} already exists. Pick another id.`);
+      if (await exists(f.path)) throw new Error(`${f.path} already exists. Pick another id.`);
     }
     await saveFiles(files);
     state.exams = await fetchExams();
     const created = state.exams.find((e) => e.id === exam.id) || { ...exam, source: t.shared ? 'shared' : 'local' };
     state.bank = state.banks[created.id] = await loadBank(created);
     state.filter = { domain: '', text: '' };
-    state.flash = `Created ${exam.name}. Add its first question below.`;
+    const skipped = result?.skipped.length ? ` ${plural(result.skipped.length, 'question')} skipped.` : '';
+    state.flash = upload
+      ? `Created ${exam.name} with ${plural(result.questions.length, 'question')} from ${t.upload.fileName}, saved as ${upload.file}.${skipped}`
+      : `Created ${exam.name}. Add its first question below.`;
     renderExam();
   } catch (e) {
     showError(`Couldn't create the test: ${e.message}`);
@@ -632,13 +694,12 @@ function renderExam() {
 
 /* ---------- Uploading a batch ---------- */
 
-function downloadTemplate() {
-  const { exam, entries } = state.bank;
-  const text = `${JSON.stringify(uploadTemplate(exam, entries.map((e) => e.q.id)), null, 2)}\n`;
+function downloadTemplate(exam, ids) {
+  const text = `${JSON.stringify(uploadTemplate(exam, ids), null, 2)}\n`;
   const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
   const a = document.createElement('a');
   a.href = url;
-  a.download = `${exam.id}_template.json`;
+  a.download = `${exam.id || 'new-test'}_template.json`;
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -669,12 +730,7 @@ function renderUpload() {
         </div>
         <div>
           <span class="field">Question file</span>
-          <label class="dropzone${ro ? ' is-disabled' : ''}" id="u-drop" for="u-file">
-            <input type="file" id="u-file" accept=".json,application/json" ${ro ? 'disabled' : ''}>
-            ${u.fileName
-              ? `<b>${esc(u.fileName)}</b><span class="muted small">Drop another file here or click to choose a different one.</span>`
-              : `<b>Drop a JSON file here</b><span class="muted small">or click to choose one.</span>`}
-          </label>
+          ${dropzoneHtml(u.fileName, ro)}
         </div>
         <div>
           <span class="field">Add them by</span>
@@ -686,7 +742,7 @@ function renderUpload() {
             ? `The file becomes the only batch in the manifest. The ${plural(batches.length, 'batch file')} listed now stay on disk but are no longer used.`
             : 'The file is added as a new batch next to the manifest. Questions whose id is already in the bank are skipped.'}</div>
         </div>
-        ${uploadSummary()}
+        ${uploadSummary(u.result, u.mode === 'replace' ? 'replace the bank' : 'add')}
         <div id="form-error" class="notice notice-bad" role="alert" ${u.error ? '' : 'hidden'}>${esc(u.error)}</div>
         ${ro ? '' : `<div class="row">
           <span class="spacer"></span>
@@ -699,10 +755,30 @@ function renderUpload() {
     </section>`;
 
   $('#cancel').addEventListener('click', renderExam);
-  $('#template').addEventListener('click', downloadTemplate);
+  $('#template').addEventListener('click', () => downloadTemplate(exam, bankIds(state.bank)));
   if (ro) return;
   $('#cancel-2').addEventListener('click', renderExam);
-  $('#u-file').addEventListener('change', (e) => readUpload(e.target.files[0]));
+  bindDropzone(readUpload);
+  app().querySelectorAll('input[name="u-mode"]').forEach((r) => r.addEventListener('change', () => {
+    u.mode = r.value;
+    checkSelected();
+    renderUpload();
+  }));
+  $('#do-upload').addEventListener('click', (e) => uploadBatch(e.target));
+}
+
+// The file input for a question batch, shown as a drop zone.
+const dropzoneHtml = (fileName, disabled = false) => `
+  <label class="dropzone${disabled ? ' is-disabled' : ''}" id="u-drop" for="u-file">
+    <input type="file" id="u-file" accept=".json,application/json" ${disabled ? 'disabled' : ''}>
+    ${fileName
+      ? `<b>${esc(fileName)}</b><span class="muted small">Drop another file here or click to choose a different one.</span>`
+      : `<b>Drop a JSON file here</b><span class="muted small">or click to choose one.</span>`}
+  </label>`;
+
+// Calls onFile with the file chosen in, or dropped on, the drop zone.
+function bindDropzone(onFile) {
+  $('#u-file').addEventListener('change', (e) => { if (e.target.files[0]) onFile(e.target.files[0]); });
   const drop = $('#u-drop');
   // dragleave also fires when moving over the zone's children, so count enters.
   let depth = 0;
@@ -714,24 +790,28 @@ function renderUpload() {
     depth = 0;
     drop.classList.remove('is-over');
     const file = e.dataTransfer.files[0];
-    if (file) readUpload(file);
+    if (file) onFile(file);
   });
-  app().querySelectorAll('input[name="u-mode"]').forEach((r) => r.addEventListener('change', () => {
-    u.mode = r.value;
-    checkSelected();
-    renderUpload();
-  }));
-  $('#do-upload').addEventListener('click', (e) => uploadBatch(e.target));
 }
 
-function uploadSummary() {
-  const r = state.upload.result;
+// The file's parsed JSON, or null after putting the parse error in u.result.
+async function readJsonFile(file, u) {
+  try {
+    return JSON.parse(await file.text());
+  } catch (e) {
+    u.result = { error: `${file.name} isn't valid JSON: ${e.message}` };
+    return null;
+  }
+}
+
+// verb finishes "N questions ready to …".
+function uploadSummary(r, verb) {
   if (!r || r.error) return r?.error ? `<div class="notice notice-bad">${esc(r.error)}</div>` : '';
   const shown = r.skipped.slice(0, 20);
   const more = r.skipped.length - shown.length;
   return `
     <div class="notice ${r.questions.length ? 'notice-good' : 'notice-bad'}" role="status">
-      <b>${plural(r.questions.length, 'question')} ready to ${state.upload.mode === 'replace' ? 'replace the bank' : 'add'}.</b>
+      <b>${plural(r.questions.length, 'question')} ready to ${verb}.</b>
     </div>
     ${r.skipped.length ? `<div class="notice notice-warn"><b>${plural(r.skipped.length, 'question')} will be skipped</b>
       <ul>${shown.map((s) => `<li>${esc(s)}</li>`).join('')}${more ? `<li>…and ${more} more.</li>` : ''}</ul></div>` : ''}`;
@@ -746,15 +826,9 @@ function checkSelected() {
 
 async function readUpload(file) {
   const u = state.upload;
-  Object.assign(u, { fileName: file ? file.name : '', data: null, result: null, error: '' });
-  if (file) {
-    try {
-      u.data = JSON.parse(await file.text());
-      checkSelected();
-    } catch (e) {
-      u.result = { error: `${file.name} isn't valid JSON: ${e.message}` };
-    }
-  }
+  Object.assign(u, { fileName: file.name, data: null, result: null, error: '' });
+  u.data = await readJsonFile(file, u);
+  checkSelected();
   renderUpload();
 }
 
@@ -1078,9 +1152,9 @@ window.addEventListener('beforeunload', (e) => {
   if (state.view === 'edit' && state.dirty) e.preventDefault();
 });
 
-// A file dropped just outside the upload drop zone would otherwise open in the tab.
+// A file dropped just outside a drop zone would otherwise open in the tab.
 for (const type of ['dragover', 'drop']) {
-  window.addEventListener(type, (e) => { if (state.view === 'upload') e.preventDefault(); });
+  window.addEventListener(type, (e) => { if (state.view === 'upload' || state.view === 'new') e.preventDefault(); });
 }
 
 init();
