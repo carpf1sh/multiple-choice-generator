@@ -216,3 +216,82 @@ test('newExamFiles appends to the shared registry in its existing shape', () => 
   assert.ok(!('title' in files[0].data.exams.at(-1)));
   assert.equal(plain(m.newExamFiles(newTest(), [{ id: 'a' }]).files[0].data).length, 2, 'bare-array registry stays an array');
 });
+
+/* ---------- Uploading batches ---------- */
+
+const sampleExam = () => readJson('exams.json').exams.find((e) => e.id === 'sample');
+
+test('uploadTemplate is a valid batch for the test it was made for', () => {
+  const ex = sampleExam();
+  const ids = ['SAMPLE-D1-001', 'SAMPLE-D1-002'];
+  const template = plain(m.uploadTemplate(ex, ids));
+  assert.equal(template.length, 4);
+  assert.deepEqual(template.map((q) => q.id), ['SAMPLE-D1-003', 'SAMPLE-D2-001', 'SAMPLE-D3-001', 'SAMPLE-D4-001']);
+  const result = plain(m.checkUpload(template, ex, ids, 'append'));
+  assert.equal(result.questions.length, 4);
+  assert.deepEqual(result.skipped, []);
+  assert.deepEqual(template.map((q) => m.normalize(q, 'f', 0).domainKey), ['D1', 'D2', 'D3', 'D4']);
+});
+
+test('checkUpload skips invalid, unknown-domain and duplicate questions', () => {
+  const [good] = plain(m.uploadTemplate(exam));
+  const data = [
+    good,
+    { ...good },                                                   // same id again
+    { ...good, id: 'X-D9-001' },                                   // unknown domain
+    { ...good, id: 'X-D1-050', correct_option: 'Z' },              // answer not an option
+    { ...good, id: 'X-D1-051', options: { A: 'only one' }, correct_option: 'A' },
+    'not a question',
+    { ...good, id: 'X-D1-052' },
+  ];
+  const r = plain(m.checkUpload(data, exam, [], 'append'));
+  assert.deepEqual(r.questions.map((q) => q.id), [good.id, 'X-D1-052']);
+  assert.equal(r.skipped.length, 5);
+  assert.match(r.skipped[0], /^#2 .*earlier in the file/);
+  assert.match(r.skipped[1], /D9/);
+  assert.match(r.skipped[4], /^#6: not a question/);
+});
+
+test('checkUpload skips ids already in the bank only when appending', () => {
+  const [good] = plain(m.uploadTemplate(exam));
+  assert.match(plain(m.checkUpload([good], exam, [good.id], 'append')).skipped[0], /already in the bank/);
+  assert.equal(plain(m.checkUpload([good], exam, [good.id], 'replace')).questions.length, 1);
+});
+
+test('checkUpload gives questions without an id the next free one from their domain', () => {
+  const { id, ...noId } = plain(m.uploadTemplate(exam))[0];
+  const data = [{ ...noId, domain: 'Domain 2: Security' }, { ...noId, id: '', domain: 'Domain 2' }, { ...noId, domain: 'Other' }];
+  const r = plain(m.checkUpload(data, exam, ['X-D2-001'], 'append'));
+  assert.deepEqual(r.questions.map((q) => q.id), ['X-D2-002', 'X-D2-003']);
+  assert.equal(Object.keys(r.questions[0])[0], 'id', 'id comes first');
+  assert.match(r.skipped[0], /^#3: no id/);
+});
+
+test('checkUpload accepts { questions } files and rejects other shapes', () => {
+  const t = plain(m.uploadTemplate(exam));
+  assert.equal(plain(m.checkUpload({ batch_id: 'b', questions: t }, exam, [], 'append')).questions.length, 2);
+  for (const bad of [{}, 'x', null, 7, { questions: 'no' }]) assert.match(m.checkUpload(bad, exam, [], 'append').error, /JSON array/);
+  assert.match(m.checkUpload([], exam, [], 'append').error, /no questions/);
+});
+
+test('uploadBatchName keeps the file name safe and unique', () => {
+  assert.equal(m.uploadBatchName('Batch V7.json', []), 'batch_v7.json');
+  assert.equal(m.uploadBatchName('batch_v7.JSON', ['batch_v7.json', 'batch_v7_2.json']), 'batch_v7_3.json');
+  assert.equal(m.uploadBatchName('../..\evil<>.json', []), 'evil.json');
+  assert.equal(m.uploadBatchName('...', []), 'upload.json');
+  assert.equal(m.uploadBatchName('CON.json', []), 'upload_con.json');
+  assert.equal(m.uploadBatchName('x'.repeat(200), []).length, 65);
+});
+
+test('uploadManifest appends a batch or replaces them all, keeping other fields', () => {
+  const manifest = readJson('samples/sample_manifest.json');
+  const appended = plain(m.uploadManifest(manifest, 'new.json', 5, 'append', 25));
+  assert.deepEqual(appended.batches.map((b) => b.file_name), ['sample_bank_v1.json', 'sample_bank_v2.json', 'new.json']);
+  assert.equal(appended.total_questions, 25);
+  assert.deepEqual(appended.target_subtopics_for_next_batches, manifest.target_subtopics_for_next_batches);
+
+  const replaced = plain(m.uploadManifest(manifest, 'new.json', 5, 'replace', 25));
+  assert.deepEqual(replaced.batches, [{ batch_id: 'new', file_name: 'new.json', item_count: 5 }]);
+  assert.equal(replaced.total_questions, 5);
+  assert.equal(replaced.manifest_version, '1.0');
+});

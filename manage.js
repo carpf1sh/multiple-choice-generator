@@ -20,11 +20,12 @@ const state = {
   writable: false,
   banks: {},       // { [examId]: bank } from loadBank
   bank: null,      // the open test
-  view: 'list',    // list | new | exam | edit
+  view: 'list',    // list | new | exam | edit | upload
   filter: { domain: '', text: '' },
   newTest: null,   // new-test form
   form: null,      // question form
   entry: null,     // the bank entry being edited; null for a new question
+  upload: null,    // upload form: { mode, fileName, data, result, error }
   dirty: false,
   flash: '',
 };
@@ -147,6 +148,87 @@ function updateManifestCounts(manifest, file, itemCount, total) {
 function addedBatchName(manifestPath) {
   const stem = manifestPath.split('/').pop().replace(/\.json$/i, '').replace(/[_-]?manifest$/i, '');
   return `${stem || 'questions'}_added.json`;
+}
+
+/* ---------- Uploading batches ---------- */
+
+// A ready-to-fill batch: one example question per domain (up to four), using
+// the bank's next free ids, so an untouched template passes checkUpload.
+function uploadTemplate(exam, ids = []) {
+  const taken = ids.map(String);
+  return exam.domains.slice(0, 4).map((d) => {
+    const id = nextQuestionId(exam.id, d.key, taken);
+    taken.push(id);
+    return {
+      id,
+      domain: `Domain ${d.key.slice(1)}: ${d.name}`,
+      subtopic: 'Subtopic name',
+      objective: `${d.key.slice(1)}.1`,
+      scenario_stem: `Question text for ${d.name}. Line breaks are kept.`,
+      options: { A: 'First option', B: 'Second option', C: 'Third option', D: 'Fourth option' },
+      correct_option: 'B',
+      explanation: {
+        correct: 'Why B is the right answer.',
+        distractors: { A: 'Why A is wrong.', C: 'Why C is wrong.', D: 'Why D is wrong.' },
+      },
+    };
+  });
+}
+
+// Sorts an uploaded batch into the questions to save and the ones to skip.
+// Questions without an id get the bank's next free one; when mode is 'append',
+// ids already in the bank are skipped so an upload can't silently replace them.
+function checkUpload(data, exam, ids, mode) {
+  const list = Array.isArray(data) ? data : (data && typeof data === 'object' && Array.isArray(data.questions) ? data.questions : null);
+  if (!list) return { error: 'The file must hold a JSON array of questions, or { "questions": [...] }.' };
+  if (!list.length) return { error: 'The file has no questions.' };
+
+  const known = new Set(exam.domains.map((d) => d.key));
+  const existing = new Set(mode === 'append' ? ids.map(String) : []);
+  const taken = [...ids.map(String)];
+  const seen = new Set();
+  const questions = [], skipped = [];
+  list.forEach((item, i) => {
+    const label = item && typeof item === 'object' && item.id != null ? `#${i + 1} (${item.id})` : `#${i + 1}`;
+    const skip = (reason) => skipped.push(`${label}: ${reason}`);
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return skip('not a question object.');
+    let raw = item;
+    if (item.id == null || String(item.id).trim() === '') {
+      const key = domainKeyFor(item, '');
+      if (!key || !known.has(key)) return skip('no id, and its domain isn\'t one of this test\'s domains.');
+      const { id: _, ...rest } = item;
+      raw = { id: nextQuestionId(exam.id, key, taken), ...rest };
+    }
+    const q = normalize(raw, '', i);
+    if (!q) return skip('missing its question text or options, has fewer than 2 options, or its answer isn\'t one of the option letters.');
+    if (!known.has(q.domainKey)) return skip(`its domain (${q.domainKey || 'none'}) isn't one of this test's domains.`);
+    if (seen.has(q.id)) return skip(`the id ${q.id} appears earlier in the file.`);
+    if (existing.has(q.id)) return skip(`the id ${q.id} is already in the bank.`);
+    seen.add(q.id);
+    taken.push(q.id);
+    questions.push(raw);
+  });
+  return { questions, skipped };
+}
+
+// A batch file name next to the manifest for an uploaded file: its own name
+// made safe for every OS, numbered when that name is already taken.
+function uploadBatchName(uploadName, taken) {
+  let stem = String(uploadName || '').replace(/\.json$/i, '').toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, '_').replace(/^[_-]+|[_-]+$/g, '').slice(0, 60) || 'upload';
+  // Windows treats these names as devices, so the server refuses them.
+  if (/^(con|prn|aux|nul|com\d|lpt\d)$/.test(stem)) stem = `upload_${stem}`;
+  const used = new Set(taken.map((t) => String(t).toLowerCase()));
+  let name = `${stem}.json`;
+  for (let n = 2; used.has(name); n++) name = `${stem}_${n}.json`;
+  return name;
+}
+
+// The manifest after an upload: appended as one more batch, or replacing every
+// batch. Replaced batch files stay on disk; they're just no longer listed.
+function uploadManifest(manifest, file, itemCount, mode, total) {
+  const base = mode === 'replace' ? { ...manifest, batches: [] } : manifest;
+  return updateManifestCounts(base, file, itemCount, mode === 'replace' ? itemCount : total);
 }
 
 const tooLong = (label, text, limit) => (text.trim().length > limit ? `${label} is too long (${text.trim().length} of ${limit} characters).` : '');
@@ -498,6 +580,7 @@ function renderExam() {
         <h2>${esc(exam.name)}</h2>
         <div class="row">
           <button class="btn btn-sm" id="to-list" type="button">← All tests</button>
+          <button class="btn btn-sm" id="upload" type="button" ${exam.domains.length ? '' : 'disabled'}>Upload questions</button>
           <button class="btn btn-primary btn-sm" id="add-question" type="button" ${state.writable && exam.domains.length ? '' : 'disabled'}>+ Add question</button>
         </div>
       </div>
@@ -527,7 +610,154 @@ function renderExam() {
   $('#f-text').addEventListener('input', (e) => { f.text = e.target.value; renderQuestionRows(); });
   $('#to-list').addEventListener('click', renderList);
   $('#add-question').addEventListener('click', () => openEditor(null));
+  $('#upload').addEventListener('click', () => {
+    state.upload = { mode: 'append', fileName: '', data: null, result: null, error: '' };
+    renderUpload();
+  });
   window.scrollTo(0, 0);
+}
+
+/* ---------- Uploading a batch ---------- */
+
+function downloadTemplate() {
+  const { exam, entries } = state.bank;
+  const text = `${JSON.stringify(uploadTemplate(exam, entries.map((e) => e.q.id)), null, 2)}\n`;
+  const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${exam.id}_template.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+function renderUpload() {
+  state.view = 'upload';
+  const u = state.upload, { exam, entries, batches } = state.bank;
+  const ro = !state.writable;
+  const domains = exam.domains.map((d) => `<span class="dkey">${esc(d.key)}</span> ${esc(d.name)}`).join(' · ');
+
+  app().innerHTML = `
+    <section class="card">
+      <div class="card-head">
+        <h2>Upload questions</h2>
+        <button class="btn btn-sm" id="cancel" type="button">← Back</button>
+      </div>
+      <div class="muted small" style="margin-bottom:1rem">${esc(exam.name)} · ${plural(entries.length, 'question')} in ${plural(batches.length, 'batch', 'batches')}</div>
+      ${readOnlyNotice()}
+      <div class="form-stack">
+        <div>
+          <span class="field">Template</span>
+          <div><button class="btn btn-sm" id="template" type="button">Download JSON template</button></div>
+          <div class="field-help">A JSON array of questions, one example per domain, using this test's domains and its next free ids.
+            Each question's domain comes from <code>-D&lt;n&gt;-</code> in its id, or from a leading <code>Domain &lt;n&gt;</code> in <code>domain</code>.
+            Domains: ${domains}.</div>
+        </div>
+        <div>
+          <label class="field" for="u-file">Question file</label>
+          <input type="file" id="u-file" accept=".json,application/json" ${ro ? 'disabled' : ''}>
+          ${u.fileName ? `<div class="field-help">Selected: ${esc(u.fileName)}</div>` : ''}
+        </div>
+        <div>
+          <span class="field">Add them by</span>
+          <div class="segmented" role="radiogroup" aria-label="Add them by">
+            <label><input type="radio" name="u-mode" value="append" ${u.mode === 'append' ? 'checked' : ''} ${ro ? 'disabled' : ''}>Appending</label>
+            <label><input type="radio" name="u-mode" value="replace" ${u.mode === 'replace' ? 'checked' : ''} ${ro ? 'disabled' : ''}>Replacing the bank</label>
+          </div>
+          <div class="field-help">${u.mode === 'replace'
+            ? `The file becomes the only batch in the manifest. The ${plural(batches.length, 'batch file')} listed now stay on disk but are no longer used.`
+            : 'The file is added as a new batch next to the manifest. Questions whose id is already in the bank are skipped.'}</div>
+        </div>
+        ${uploadSummary()}
+        <div id="form-error" class="notice notice-bad" role="alert" ${u.error ? '' : 'hidden'}>${esc(u.error)}</div>
+        ${ro ? '' : `<div class="row">
+          <span class="spacer"></span>
+          <button class="btn" id="cancel-2" type="button">Cancel</button>
+          <button class="btn btn-primary" id="do-upload" type="button" ${u.result?.questions?.length ? '' : 'disabled'}>
+            ${u.result?.questions?.length ? `${u.mode === 'replace' ? 'Replace with' : 'Add'} ${plural(u.result.questions.length, 'question')}` : 'Upload'}
+          </button>
+        </div>`}
+      </div>
+    </section>`;
+
+  $('#cancel').addEventListener('click', renderExam);
+  $('#template').addEventListener('click', downloadTemplate);
+  if (ro) return;
+  $('#cancel-2').addEventListener('click', renderExam);
+  $('#u-file').addEventListener('change', (e) => readUpload(e.target.files[0]));
+  app().querySelectorAll('input[name="u-mode"]').forEach((r) => r.addEventListener('change', () => {
+    u.mode = r.value;
+    checkSelected();
+    renderUpload();
+  }));
+  $('#do-upload').addEventListener('click', (e) => uploadBatch(e.target));
+}
+
+function uploadSummary() {
+  const r = state.upload.result;
+  if (!r || r.error) return r?.error ? `<div class="notice notice-bad">${esc(r.error)}</div>` : '';
+  const shown = r.skipped.slice(0, 20);
+  const more = r.skipped.length - shown.length;
+  return `
+    <div class="notice ${r.questions.length ? 'notice-good' : 'notice-bad'}" role="status">
+      <b>${plural(r.questions.length, 'question')} ready to ${state.upload.mode === 'replace' ? 'replace the bank' : 'add'}.</b>
+    </div>
+    ${r.skipped.length ? `<div class="notice notice-warn"><b>${plural(r.skipped.length, 'question')} will be skipped</b>
+      <ul>${shown.map((s) => `<li>${esc(s)}</li>`).join('')}${more ? `<li>…and ${more} more.</li>` : ''}</ul></div>` : ''}`;
+}
+
+const bankIds = (bank) => bank.entries.map((e) => e.q.id);
+
+function checkSelected() {
+  const u = state.upload;
+  if (u.data !== null) u.result = checkUpload(u.data, state.bank.exam, bankIds(state.bank), u.mode);
+}
+
+async function readUpload(file) {
+  const u = state.upload;
+  Object.assign(u, { fileName: file ? file.name : '', data: null, result: null, error: '' });
+  if (file) {
+    try {
+      u.data = JSON.parse(await file.text());
+      checkSelected();
+    } catch (e) {
+      u.result = { error: `${file.name} isn't valid JSON: ${e.message}` };
+    }
+  }
+  renderUpload();
+}
+
+async function uploadBatch(button) {
+  const u = state.upload, exam = state.bank.exam;
+  const count = u.result.questions.length;
+  if (u.mode === 'replace' && !confirm(`Replace all ${plural(state.bank.entries.length, 'question')} in ${exam.name} with the ${plural(count, 'question')} from ${u.fileName}?`)) return;
+
+  button.disabled = true;
+  button.textContent = 'Uploading…';
+  try {
+    // Re-read the bank so batches written since the page loaded are counted.
+    const bank = await loadBank(exam);
+    const manifest = await fetchJson(exam.manifest);
+    const result = checkUpload(u.data, exam, bankIds(bank), u.mode);
+    if (!result.questions.length) throw new Error('None of the questions can be added any more. Go back and check the bank.');
+    const taken = (manifest.batches || []).map((b) => b && b.file_name).filter(Boolean);
+    let file = uploadBatchName(u.fileName, taken);
+    // A file can be on disk without being listed, for example after a replace.
+    while (await fetch(bank.base + file, { method: 'HEAD', cache: 'no-store' }).then((r) => r.ok, () => false)) {
+      taken.push(file);
+      file = uploadBatchName(u.fileName, taken);
+    }
+    const data = withQuestions(u.data, result.questions);
+    const total = countQuestions([...bank.batches, { file, data }]);
+    const nextManifest = uploadManifest(manifest, file, result.questions.length, u.mode, total);
+    await saveFiles([{ path: bank.base + file, data }, { path: exam.manifest, data: nextManifest }]);
+    const skipped = result.skipped.length ? ` ${plural(result.skipped.length, 'question')} skipped.` : '';
+    await reloadBank(`${u.mode === 'replace' ? 'Replaced the bank with' : 'Added'} ${plural(result.questions.length, 'question')} from ${u.fileName}, saved as ${file}.${skipped}`);
+  } catch (e) {
+    u.error = `Couldn't upload: ${e.message}`;
+    renderUpload();
+  }
 }
 
 function renderQuestionRows() {
@@ -767,8 +997,9 @@ async function saveQuestion(button) {
     // Re-read the files so changes made since the page loaded aren't lost.
     const manifest = await fetchJson(exam.manifest);
     const listed = (manifest.batches || []).some((b) => b && b.file_name === file);
+    // An unlisted file may be a batch a replacing upload left behind, so it isn't read back in.
     let data = [];
-    try { data = await fetchJson(bank.base + file); } catch (e) { if (entry || listed) throw e; }
+    if (entry || listed) data = await fetchJson(bank.base + file);
     await saveFiles(bankWrite(bank, manifest, file, upsertQuestion(data, raw, entry ? entry.q.id : null, file)));
     state.dirty = false;
     await reloadBank(`${entry ? 'Saved' : 'Added'} ${id}.`);
