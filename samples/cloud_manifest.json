@@ -1,6 +1,6 @@
 {
   "manifest_version": "1.0",
-  "total_questions": 16,
+  "total_questions": 25,
   "batches": [
     {
       "batch_id": "v1",
@@ -30,11 +30,24 @@
         "Domain 3: Monitoring and Alerting",
         "Domain 3: Backup and Recovery"
       ]
+    },
+    {
+      "batch_id": "v3",
+      "file_name": "cloud_bank_v3.json",
+      "item_count": 9,
+      "covered_subtopics": [
+        "Domain 1: Cloud Migration Strategies",
+        "Domain 1: Service Models",
+        "Domain 2: Compliance Frameworks",
+        "Domain 2: Identity and Access Management",
+        "Domain 3: Cost Allocation and Tagging",
+        "Domain 3: Pricing Models"
+      ]
     }
   ],
   "target_subtopics_for_next_batches": [
-    "Domain 1: Cloud Migration Strategies",
-    "Domain 2: Compliance Frameworks",
-    "Domain 3: Cost Allocation and Tagging"
+    "Domain 1: High Availability Design",
+    "Domain 2: Data Residency",
+    "Domain 3: Rightsizing"
   ]
 }

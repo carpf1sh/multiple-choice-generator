@@ -356,6 +356,8 @@ function renderSetup() {
         <tbody>${domainRows}</tbody>
       </table>
       ${focusNotice()}
+      ${canLoadDemo() ? `<div class="notice notice-info row">No tests taken yet. Load some made-up tests to try Test history and Performance.
+        <span class="spacer"></span>${demoButton()}</div>` : ''}
       ${warnings}
     </section>
 
@@ -522,6 +524,7 @@ function bindSetup() {
   $('#show-history').addEventListener('click', renderHistory);
   $('#show-performance').addEventListener('click', renderPerformance);
   $('#focus-link')?.addEventListener('click', renderPerformance);
+  bindDemoButtons();
 
   $('#reload-bank').addEventListener('click', async () => {
     app().innerHTML = '<div class="loading">Reloading question bank…</div>';
@@ -717,6 +720,15 @@ function next() {
   goTo(t.current + 1);
 }
 
+// Answer history used by "Prefer unseen" and "Focus on missed".
+function noteAnswer(id, wrong, at) {
+  const h = (state.history[id] ||= { seen: 0, wrong: 0, last: 0 });
+  h.seen++;
+  if (wrong) h.wrong++;
+  h.lastWrong = wrong;
+  h.last = at;
+}
+
 function finishTest() {
   const t = state.test;
   const unanswered = t.answers.filter((a) => a == null).length;
@@ -725,14 +737,7 @@ function finishTest() {
 
   stopTimer();
   t.endedAt = Date.now();
-  t.questions.forEach((q, i) => {
-    const h = (state.history[q.id] ||= { seen: 0, wrong: 0, last: 0 });
-    const wrong = t.answers[i] !== q.answer;
-    h.seen++;
-    if (wrong) h.wrong++;
-    h.lastWrong = wrong;
-    h.last = t.endedAt;
-  });
+  t.questions.forEach((q, i) => noteAnswer(q.id, t.answers[i] !== q.answer, t.endedAt));
   saveHistory();
   recordAttempt(t);
   renderResults();
@@ -920,6 +925,59 @@ function attemptSummary(a) {
 
 const examAttempts = () => state.attempts.filter((a) => a.examId === state.exam?.id);
 
+/* ---------- Demo history ----------
+ * An exam can list a file of made-up finished tests ("demoHistory" in the
+ * registry; the samples' come from tools/demo-history.js), so Test history and
+ * Performance can be tried before taking any tests. It's offered only while the
+ * exam has no tests of its own. */
+
+const DEMO_LAST_HOURS_AGO = 1; // the latest demo test is dated this long before loading
+
+// Valid attempts from a demo file, assigned to examId, with every date moved by
+// the same amount so the latest finished DEMO_LAST_HOURS_AGO before now.
+function demoAttempts(records, examId, now = Date.now()) {
+  const list = (Array.isArray(records) ? records : [])
+    .filter((a) => a && Array.isArray(a.questions) && Number.isFinite(a.endedAt))
+    .sort((a, b) => a.endedAt - b.endedAt);
+  if (!list.length) return [];
+  const shift = now - DEMO_LAST_HOURS_AGO * 3600e3 - list.at(-1).endedAt;
+  return list.map((a) => ({
+    ...a,
+    examId,
+    startedAt: (Number.isFinite(a.startedAt) ? a.startedAt : a.endedAt) + shift,
+    endedAt: a.endedAt + shift,
+  }));
+}
+
+const canLoadDemo = () => !!state.exam?.demoHistory && !examAttempts().length;
+
+const demoButton = (label = 'Load demo history') => (canLoadDemo()
+  ? `<button class="btn btn-sm" type="button" data-load-demo>${esc(label)}</button>` : '');
+
+async function loadDemoHistory() {
+  const attempts = demoAttempts(await fetchJson(state.exam.demoHistory), state.exam.id);
+  if (!attempts.length) throw new Error('The demo history file has no tests in it.');
+  for (const a of attempts) for (const r of a.questions) noteAnswer(r.id, r.chosen !== r.answer, a.endedAt);
+  state.attempts = [...state.attempts, ...attempts].slice(-MAX_ATTEMPTS);
+  saveHistory();
+  saveAttempts();
+}
+
+// Wire the page's "Load demo history" buttons; then() runs once it's loaded.
+function bindDemoButtons(then = renderPerformance) {
+  app().querySelectorAll('[data-load-demo]').forEach((b) => b.addEventListener('click', async () => {
+    b.disabled = true;
+    try {
+      await loadDemoHistory();
+    } catch (e) {
+      b.disabled = false;
+      alert(`Could not load the demo history: ${e.message}`);
+      return;
+    }
+    then();
+  }));
+}
+
 // Rebuild a finished test from a stored attempt. Questions that have left the
 // bank, or whose answer no longer matches, become placeholders that keep the score.
 function restoreAttempt(a) {
@@ -1015,7 +1073,8 @@ function renderHistory() {
         <span class="muted small">The last ${MAX_ATTEMPTS} finished tests are kept in this browser.</span>
         <span class="spacer"></span>
         <button class="btn btn-sm" id="clear-attempts" type="button">Clear test history</button>
-      </div>` : '<div class="empty">No finished tests for this exam yet. Results are saved here each time you finish a test.</div>'}
+      </div>` : `<div class="empty">No finished tests for this exam yet. Results are saved here each time you finish a test.
+        ${canLoadDemo() ? `<p>To see how it looks, load some made-up tests for this exam. Clear test history removes them again.</p>${demoButton()}` : ''}</div>`}
     </section>
     ${domainRows ? `
     <section class="card">
@@ -1027,6 +1086,7 @@ function renderHistory() {
     </section>` : ''}`;
 
   $('#history-back').addEventListener('click', renderSetup);
+  bindDemoButtons(renderHistory);
   $('#history-performance').addEventListener('click', renderPerformance);
   app().querySelectorAll('[data-attempt]').forEach((b) => b.addEventListener('click', () => {
     state.test = restoreAttempt(attempts[Number(b.dataset.attempt)]);
@@ -1272,9 +1332,11 @@ function renderPerformance() {
   if (!attempts.length) {
     app().innerHTML = `<section class="card">
       <div class="card-head"><h2>Performance</h2>${back}</div>
-      <div class="empty">No finished tests for this exam yet. Take a test and your results by domain and subtopic, with suggestions on what to practise, will show up here.</div>
+      <div class="empty">No finished tests for this exam yet. Take a test and your results by domain and subtopic, with suggestions on what to practise, will show up here.
+        ${canLoadDemo() ? `<p>Or load some made-up tests for this exam to see it in action. Clear test history removes them again.</p>${demoButton()}` : ''}</div>
     </section>`;
     $('#perf-back').addEventListener('click', renderSetup);
+    bindDemoButtons();
     window.scrollTo(0, 0);
     return;
   }

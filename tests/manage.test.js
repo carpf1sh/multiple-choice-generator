@@ -309,7 +309,7 @@ test('uploadBatchName keeps the file name safe and unique', () => {
 test('uploadManifest appends a batch or replaces them all, keeping other fields', () => {
   const manifest = readJson('samples/sample_manifest.json');
   const appended = plain(m.uploadManifest(manifest, 'new.json', 5, 'append', 25));
-  assert.deepEqual(appended.batches.map((b) => b.file_name), ['sample_bank_v1.json', 'sample_bank_v2.json', 'new.json']);
+  assert.deepEqual(appended.batches.map((b) => b.file_name), [...manifest.batches.map((b) => b.file_name), 'new.json']);
   assert.equal(appended.total_questions, 25);
   assert.deepEqual(appended.target_subtopics_for_next_batches, manifest.target_subtopics_for_next_batches);
 

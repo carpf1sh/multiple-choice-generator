@@ -1,0 +1,254 @@
+[
+  {
+    "id": "SAMPLE-D1-007",
+    "domain": "Domain 1: Networking",
+    "subtopic": "Routing Protocols",
+    "scenario_stem": "A company's routers build a complete map of the network topology, flood updates only when a link changes, and run Dijkstra's shortest-path algorithm to choose routes. Which type of routing protocol is this?",
+    "options": {
+      "A": "Distance-vector, such as RIP",
+      "B": "Link-state, such as OSPF",
+      "C": "Path-vector, such as BGP",
+      "D": "Static routing"
+    },
+    "correct_option": "B",
+    "explanation": {
+      "correct": "Link-state protocols such as OSPF have every router learn the full topology from flooded link-state advertisements and compute shortest paths with Dijkstra's algorithm.",
+      "distractors": {
+        "A": "Distance-vector protocols such as RIP share only their routing tables with neighbours and pick routes by hop count; routers never see the whole topology.",
+        "C": "Path-vector protocols such as BGP exchange the list of autonomous systems a route passes through and choose routes by policy, mainly between organisations.",
+        "D": "Static routes are typed in by an administrator; they don't exchange updates or calculate paths."
+      }
+    }
+  },
+  {
+    "id": "SAMPLE-D1-008",
+    "domain": "Domain 1: Networking",
+    "subtopic": "Network Address Translation",
+    "scenario_stem": "A small office has 40 laptops with private 192.168.1.x addresses but only one public IPv4 address from its ISP. All the laptops browse the web at the same time. What lets them share the single public address?",
+    "options": {
+      "A": "DHCP reservations",
+      "B": "A /24 subnet mask",
+      "C": "Port Address Translation (PAT, or NAT overload)",
+      "D": "A DNS A record for each laptop"
+    },
+    "correct_option": "C",
+    "explanation": {
+      "correct": "PAT maps each internal address and source port to a unique port on the one public address, so many devices can share it and replies find their way back.",
+      "distractors": {
+        "A": "DHCP reservations always hand a device the same private address; they don't make private addresses reachable on the internet.",
+        "B": "The subnet mask only sets the size of the local network; it doesn't translate addresses.",
+        "D": "DNS records map names to addresses for incoming lookups; they don't let private hosts share a public address."
+      }
+    }
+  },
+  {
+    "id": "SAMPLE-D1-009",
+    "domain": "Domain 1: Networking",
+    "subtopic": "DNS Record Types",
+    "scenario_stem": "A company wants shop.example.com to always point wherever its hosted storefront provider's hostname, stores.provider.net, currently resolves, without tracking the provider's IP address changes. Which DNS record should it create?",
+    "options": {
+      "A": "A record",
+      "B": "MX record",
+      "C": "PTR record",
+      "D": "CNAME record"
+    },
+    "correct_option": "D",
+    "explanation": {
+      "correct": "A CNAME makes one name an alias of another, so lookups for shop.example.com follow stores.provider.net to whatever address it currently has.",
+      "distractors": {
+        "A": "An A record holds a fixed IPv4 address, which would have to be updated every time the provider changed it.",
+        "B": "An MX record names the mail servers for a domain; it isn't used for web traffic.",
+        "C": "A PTR record maps an IP address back to a name for reverse lookups."
+      }
+    }
+  },
+  {
+    "id": "SAMPLE-D2-006",
+    "domain": "Domain 2: Security",
+    "subtopic": "Public Key Infrastructure",
+    "scenario_stem": "A browser connects to a bank's website and receives its TLS certificate. What lets the browser trust that the public key in the certificate really belongs to the bank?",
+    "options": {
+      "A": "The certificate is signed by a certificate authority whose root the browser already trusts",
+      "B": "The certificate is encrypted with the bank's private key so only the browser can read it",
+      "C": "The website's IP address matches the one in the certificate",
+      "D": "The certificate was downloaded over HTTPS"
+    },
+    "correct_option": "A",
+    "explanation": {
+      "correct": "In PKI, a certificate authority vouches for the binding between a name and a public key by signing the certificate. The browser checks that signature chain up to a root certificate in its trust store.",
+      "distractors": {
+        "B": "Certificates are public and aren't encrypted; the signature that matters is the CA's, not the site's.",
+        "C": "Certificates bind domain names, not IP addresses, and an attacker could answer from any address.",
+        "D": "The certificate is what makes HTTPS trustworthy in the first place, so using HTTPS to fetch it proves nothing on its own."
+      }
+    }
+  },
+  {
+    "id": "SAMPLE-D2-007",
+    "domain": "Domain 2: Security",
+    "subtopic": "Public Key Infrastructure",
+    "scenario_stem": "A web server's private key was stolen, but its certificate is still valid for another ten months. What should the administrator do so clients stop trusting the old certificate?",
+    "options": {
+      "A": "Delete the certificate file from the server",
+      "B": "Ask the certificate authority to revoke it, so it appears in CRL and OCSP responses",
+      "C": "Change the server's IP address",
+      "D": "Wait for the certificate to expire"
+    },
+    "correct_option": "B",
+    "explanation": {
+      "correct": "Revocation tells the CA to publish the certificate as no longer trusted through its certificate revocation list (CRL) and OCSP responder, which clients check. A new key pair and certificate are then issued.",
+      "distractors": {
+        "A": "The attacker has their own copy of the certificate and key; deleting the server's copy doesn't stop them using it.",
+        "C": "Certificates are tied to names, not addresses, so the stolen one still works for an impostor at any address.",
+        "D": "Waiting ten months leaves the attacker free to impersonate the site the whole time."
+      }
+    }
+  },
+  {
+    "id": "SAMPLE-D2-008",
+    "domain": "Domain 2: Security",
+    "subtopic": "Social Engineering",
+    "scenario_stem": "An employee receives an email that appears to come from the CFO, marked urgent, asking them to wire money to a new supplier today and not to discuss it with anyone. What kind of attack is this most likely to be?",
+    "options": {
+      "A": "Business email compromise (a targeted phishing attack)",
+      "B": "Denial of service",
+      "C": "SQL injection",
+      "D": "Man-in-the-middle"
+    },
+    "correct_option": "A",
+    "explanation": {
+      "correct": "Impersonating an executive, creating urgency and asking for secrecy are hallmarks of business email compromise, a targeted form of phishing. Payment requests like this should be checked through a separate, known channel.",
+      "distractors": {
+        "B": "A denial-of-service attack floods a service to make it unavailable; it doesn't try to trick a person into acting.",
+        "C": "SQL injection targets an application's database queries, not employees.",
+        "D": "A man-in-the-middle attack intercepts traffic between two parties; this attack relies on persuading the reader."
+      }
+    }
+  },
+  {
+    "id": "SAMPLE-D3-006",
+    "domain": "Domain 3: Programming",
+    "subtopic": "Object-Oriented Design",
+    "scenario_stem": "A BankAccount class keeps its balance in a private field. The only way to change it is through deposit() and withdraw() methods, which reject negative amounts and overdrafts. Which object-oriented principle does this show?",
+    "options": {
+      "A": "Inheritance",
+      "B": "Polymorphism",
+      "C": "Encapsulation",
+      "D": "Composition"
+    },
+    "correct_option": "C",
+    "explanation": {
+      "correct": "Encapsulation hides an object's internal state and exposes only methods that keep it valid, so no outside code can set the balance to something impossible.",
+      "distractors": {
+        "A": "Inheritance lets a class reuse and extend another class's behaviour; nothing here is inherited.",
+        "B": "Polymorphism lets different classes respond to the same method call in their own way.",
+        "D": "Composition builds an object out of other objects; the example is about protecting a field."
+      }
+    }
+  },
+  {
+    "id": "SAMPLE-D3-007",
+    "domain": "Domain 3: Programming",
+    "subtopic": "Object-Oriented Design",
+    "scenario_stem": "A drawing program keeps a list of Shape objects. Circle, Square and Triangle each implement their own area() method, and the program totals the area by calling shape.area() on every item without checking its type. Which principle makes this work?",
+    "options": {
+      "A": "Encapsulation",
+      "B": "Polymorphism",
+      "C": "Recursion",
+      "D": "Memoization"
+    },
+    "correct_option": "B",
+    "explanation": {
+      "correct": "Polymorphism lets code call the same method on objects of different classes and have each class's own implementation run.",
+      "distractors": {
+        "A": "Encapsulation is about hiding internal state behind methods, not about one call working across several types.",
+        "C": "Recursion is a function calling itself; nothing here is recursive.",
+        "D": "Memoization caches the results of earlier calls; the totals aren't cached."
+      }
+    }
+  },
+  {
+    "id": "SAMPLE-D3-008",
+    "domain": "Domain 3: Programming",
+    "subtopic": "Algorithmic Complexity",
+    "scenario_stem": "A program searches a sorted array of one million numbers by checking the middle element and discarding the half that can't hold the target, repeating until it's found. Roughly how many comparisons does it need in the worst case?",
+    "options": {
+      "A": "About 20",
+      "B": "About 1,000",
+      "C": "About 500,000",
+      "D": "About 1,000,000"
+    },
+    "correct_option": "A",
+    "explanation": {
+      "correct": "Binary search halves the range each step, so it takes about log2(n) comparisons: log2(1,000,000) is just under 20.",
+      "distractors": {
+        "B": "About 1,000 is the square root of a million; binary search grows far more slowly than that.",
+        "C": "About 500,000 is the average for a linear search, which checks elements one by one.",
+        "D": "About 1,000,000 is the worst case for a linear search, not a binary one."
+      }
+    }
+  },
+  {
+    "id": "SAMPLE-D4-005",
+    "domain": "Domain 4: Databases",
+    "subtopic": "Indexing",
+    "scenario_stem": "A query that looks up orders by customer_id on a 50-million-row table takes several seconds, because the database reads every row. The table is mostly read and rarely updated. What is the most direct fix?",
+    "options": {
+      "A": "Normalize the table into third normal form",
+      "B": "Add a CHECK constraint on customer_id",
+      "C": "Wrap the query in a transaction",
+      "D": "Create an index on customer_id"
+    },
+    "correct_option": "D",
+    "explanation": {
+      "correct": "An index (usually a B-tree) lets the database jump straight to the matching rows instead of scanning the whole table. Its cost, slower writes and extra storage, matters little for a read-heavy table.",
+      "distractors": {
+        "A": "Normalization reduces duplicated data; it doesn't stop the database scanning every row to find a customer's orders.",
+        "B": "A CHECK constraint validates values as they're written; it doesn't speed up reads.",
+        "C": "A transaction groups statements so they succeed or fail together; it doesn't change how rows are found."
+      }
+    }
+  },
+  {
+    "id": "SAMPLE-D4-006",
+    "domain": "Domain 4: Databases",
+    "subtopic": "Indexing",
+    "scenario_stem": "A table has a composite index on (last_name, first_name). Which query can use this index to avoid scanning the whole table?",
+    "options": {
+      "A": "SELECT * FROM people WHERE first_name = 'Ana'",
+      "B": "SELECT * FROM people WHERE last_name = 'Silva'",
+      "C": "SELECT * FROM people WHERE email = 'ana@example.com'",
+      "D": "SELECT * FROM people WHERE UPPER(first_name) = 'ANA'"
+    },
+    "correct_option": "B",
+    "explanation": {
+      "correct": "A composite index is sorted by its first column, then the next. A filter on the leading column, last_name, can seek straight into it.",
+      "distractors": {
+        "A": "first_name is the second column of the index, so rows for 'Ana' are spread throughout it; the leading column must be filtered for a seek.",
+        "C": "email isn't part of the index at all.",
+        "D": "Wrapping the column in a function hides it from the index, and first_name isn't the leading column anyway."
+      }
+    }
+  },
+  {
+    "id": "SAMPLE-D4-007",
+    "domain": "Domain 4: Databases",
+    "subtopic": "SQL Joins",
+    "scenario_stem": "A report must list every customer, including those who have never placed an order, alongside their order totals. Which join of customers to orders should it use?",
+    "options": {
+      "A": "customers INNER JOIN orders",
+      "B": "customers CROSS JOIN orders",
+      "C": "customers LEFT JOIN orders",
+      "D": "customers RIGHT JOIN orders"
+    },
+    "correct_option": "C",
+    "explanation": {
+      "correct": "A LEFT JOIN keeps every row from the left table, customers, and fills the order columns with NULL where there's no match.",
+      "distractors": {
+        "A": "An INNER JOIN keeps only customers with at least one order, so those who never ordered drop out.",
+        "B": "A CROSS JOIN pairs every customer with every order, regardless of who placed it.",
+        "D": "A RIGHT JOIN keeps every order, including any without a matching customer, and drops customers with no orders."
+      }
+    }
+  }
+]

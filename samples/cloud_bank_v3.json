@@ -1,0 +1,200 @@
+[
+  {
+    "id": "CLOUD-D1-007",
+    "domain": "Domain 1: Cloud Concepts",
+    "subtopic": "Cloud Migration Strategies",
+    "objective": "1.4",
+    "scenario_stem": "A company must leave its data center within three months when the lease ends. It plans to move its virtual machines to cloud instances as they are, with no code changes, and modernise them later. Which migration strategy is this?",
+    "options": {
+      "A": "Refactor (re-architect)",
+      "B": "Repurchase (move to SaaS)",
+      "C": "Rehost (lift and shift)",
+      "D": "Retire"
+    },
+    "correct_option": "C",
+    "explanation": {
+      "correct": "Rehosting moves workloads to the cloud unchanged. It's the fastest strategy, which suits a hard deadline, and leaves optimisation for later.",
+      "distractors": {
+        "A": "Refactoring redesigns the application to use cloud-native services, which takes far longer than three months for most estates.",
+        "B": "Repurchasing replaces the application with a SaaS product; the company is keeping its own virtual machines.",
+        "D": "Retiring switches off applications that are no longer needed; these workloads are being kept."
+      }
+    }
+  },
+  {
+    "id": "CLOUD-D1-008",
+    "domain": "Domain 1: Cloud Concepts",
+    "subtopic": "Cloud Migration Strategies",
+    "objective": "1.4",
+    "scenario_stem": "A retailer's monolithic order system can't scale for holiday peaks. The team decides to split it into services running on managed containers and serverless functions as part of moving to the cloud. Which migration strategy is this?",
+    "options": {
+      "A": "Refactor (re-architect)",
+      "B": "Rehost (lift and shift)",
+      "C": "Retain",
+      "D": "Relocate"
+    },
+    "correct_option": "A",
+    "explanation": {
+      "correct": "Refactoring changes the application's architecture to take advantage of cloud-native services. It costs the most effort but addresses scalability problems a straight move wouldn't.",
+      "distractors": {
+        "B": "Rehosting moves the monolith unchanged, so it would hit the same scaling limits in the cloud.",
+        "C": "Retaining keeps the application where it is for now; this one is being moved and redesigned.",
+        "D": "Relocating moves a whole virtualised environment to the cloud at the hypervisor level without changing the applications."
+      }
+    }
+  },
+  {
+    "id": "CLOUD-D1-009",
+    "domain": "Domain 1: Cloud Concepts",
+    "subtopic": "Service Models",
+    "objective": "1.1",
+    "scenario_stem": "A startup signs up for a hosted email and calendar service. The provider runs the application, servers and storage; the startup only manages its user accounts and settings. Which service model is this?",
+    "options": {
+      "A": "Infrastructure as a Service (IaaS)",
+      "B": "Platform as a Service (PaaS)",
+      "C": "Function as a Service (FaaS)",
+      "D": "Software as a Service (SaaS)"
+    },
+    "correct_option": "D",
+    "explanation": {
+      "correct": "With SaaS the provider delivers and runs a complete application; the customer just configures it and manages its users and data.",
+      "distractors": {
+        "A": "With IaaS the customer rents virtual machines, storage and networks and runs everything on top themselves.",
+        "B": "With PaaS the customer deploys their own code to a managed runtime; here they write no code at all.",
+        "C": "FaaS runs the customer's own functions in response to events; the startup is using a finished application."
+      }
+    }
+  },
+  {
+    "id": "CLOUD-D2-006",
+    "domain": "Domain 2: Security and Compliance",
+    "subtopic": "Compliance Frameworks",
+    "objective": "2.4",
+    "scenario_stem": "An online store that stores and processes card payments is moving its checkout to a cloud provider. Which compliance standard applies specifically to how it handles cardholder data?",
+    "options": {
+      "A": "HIPAA",
+      "B": "PCI DSS",
+      "C": "SOX",
+      "D": "FedRAMP"
+    },
+    "correct_option": "B",
+    "explanation": {
+      "correct": "The Payment Card Industry Data Security Standard (PCI DSS) sets the security requirements for any organisation that stores, processes or transmits cardholder data.",
+      "distractors": {
+        "A": "HIPAA covers protected health information in the United States, not payment cards.",
+        "C": "The Sarbanes-Oxley Act governs financial reporting controls at public companies.",
+        "D": "FedRAMP authorises cloud services for use by US federal agencies."
+      }
+    }
+  },
+  {
+    "id": "CLOUD-D2-007",
+    "domain": "Domain 2: Security and Compliance",
+    "subtopic": "Compliance Frameworks",
+    "objective": "2.4",
+    "scenario_stem": "An auditor asks a company to prove that the data centers hosting its cloud workloads meet physical security and availability controls. The company has no access to the provider's facilities. What should it give the auditor?",
+    "options": {
+      "A": "Photos of the provider's data center from its marketing site",
+      "B": "The company's own penetration test of its virtual machines",
+      "C": "The provider's third-party audit reports, such as SOC 2 and ISO 27001 certificates",
+      "D": "A written statement from the company's cloud architect"
+    },
+    "correct_option": "C",
+    "explanation": {
+      "correct": "Under the shared responsibility model the provider secures its facilities and proves it with independent audit reports and certifications, which customers download and pass to their auditors.",
+      "distractors": {
+        "A": "Marketing photos aren't evidence that any control exists or works.",
+        "B": "A penetration test of the company's own machines covers its side of the model, not the provider's data centers.",
+        "D": "The company's architect can't attest to controls in facilities they have no access to."
+      }
+    }
+  },
+  {
+    "id": "CLOUD-D2-008",
+    "domain": "Domain 2: Security and Compliance",
+    "subtopic": "Identity and Access Management",
+    "objective": "2.1",
+    "scenario_stem": "Developers on a team currently all sign in with the cloud account's root user to deploy applications. What should the security lead do first?",
+    "options": {
+      "A": "Rotate the root password every week",
+      "B": "Give each developer their own identity with only the permissions they need, and protect and stop using the root user",
+      "C": "Share the root password through a password manager instead of chat",
+      "D": "Restrict root sign-ins to office hours"
+    },
+    "correct_option": "B",
+    "explanation": {
+      "correct": "Individual identities with least-privilege roles make actions traceable to a person and limit what each can do. The root user should get MFA and be kept for the few tasks that need it.",
+      "distractors": {
+        "A": "Rotating a shared password still leaves everyone with unlimited access and no way to tell who did what.",
+        "C": "A password manager protects the secret in transit but everyone still shares unrestricted, untraceable access.",
+        "D": "Limiting the hours doesn't reduce the permissions or make actions traceable."
+      }
+    }
+  },
+  {
+    "id": "CLOUD-D3-006",
+    "domain": "Domain 3: Operations and Cost",
+    "subtopic": "Cost Allocation and Tagging",
+    "objective": "3.4",
+    "scenario_stem": "Finance can see the company's total monthly cloud bill but can't tell how much each product team spends. What should the cloud team put in place?",
+    "options": {
+      "A": "Turn on auto scaling for every service",
+      "B": "Move every workload to reserved instances",
+      "C": "Apply cost allocation tags, such as team and project, to every resource and report spend by tag",
+      "D": "Put each region's resources in its own VPC"
+    },
+    "correct_option": "C",
+    "explanation": {
+      "correct": "Cost allocation tags label each resource with its owner, and billing reports grouped by tag show each team's share. A tagging policy keeps new resources consistent.",
+      "distractors": {
+        "A": "Auto scaling can lower costs but doesn't show who is spending what.",
+        "B": "Reserved instances change the price paid, not how spend is attributed to teams.",
+        "D": "Networks split by region don't line up with teams, and VPCs aren't a billing breakdown."
+      }
+    }
+  },
+  {
+    "id": "CLOUD-D3-007",
+    "domain": "Domain 3: Operations and Cost",
+    "subtopic": "Cost Allocation and Tagging",
+    "objective": "3.4",
+    "scenario_stem": "A company reports each department's cloud spend back to it every month for awareness, but pays the bill centrally without charging departments' budgets. What is this practice called?",
+    "options": {
+      "A": "Showback",
+      "B": "Chargeback",
+      "C": "Rightsizing",
+      "D": "Committed use discount"
+    },
+    "correct_option": "A",
+    "explanation": {
+      "correct": "Showback shows each department what its usage costs without billing it, to encourage awareness.",
+      "distractors": {
+        "B": "Chargeback actually charges each department's budget for its usage.",
+        "C": "Rightsizing adjusts resource sizes to match actual usage; it isn't a reporting practice.",
+        "D": "A committed use discount is a lower price in exchange for committing to a level of usage."
+      }
+    }
+  },
+  {
+    "id": "CLOUD-D3-008",
+    "domain": "Domain 3: Operations and Cost",
+    "subtopic": "Pricing Models",
+    "objective": "3.1",
+    "scenario_stem": "A research lab runs large batch simulations that save their progress regularly and can be restarted at any time. It wants the lowest possible compute price. Which pricing option fits best?",
+    "options": {
+      "A": "On-demand instances",
+      "B": "Spot (preemptible) instances",
+      "C": "Dedicated hosts",
+      "D": "Three-year reserved instances"
+    },
+    "correct_option": "B",
+    "explanation": {
+      "correct": "Spot instances use spare capacity at a steep discount but can be reclaimed at short notice, which suits interruptible, checkpointed batch work.",
+      "distractors": {
+        "A": "On-demand instances are never interrupted but cost much more than spot capacity.",
+        "C": "Dedicated hosts are physical servers reserved for one customer, usually for licensing or compliance, and cost the most.",
+        "D": "Reserved instances discount steady, always-on usage over a long term; bursty batch jobs don't need that commitment."
+      }
+    }
+  }
+]

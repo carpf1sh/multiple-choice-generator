@@ -16,7 +16,7 @@ const EXPORTS = [
   'domainKeyFor', 'normalize', 'examList', 'largestRemainder', 'allocate', 'priorityScore',
   'orderByPriority', 'interleave', 'pickFromDomain', 'currentWeights', 'availableByDomain', 'planTest',
   'MAX_ATTEMPTS', 'attemptRecord', 'recordAttempt', 'attemptSummary', 'restoreAttempt',
-  'PASS_MARK', 'performanceStats', 'recommendations',
+  'PASS_MARK', 'performanceStats', 'recommendations', 'demoAttempts',
 ];
 
 const MANAGE_EXPORTS = [

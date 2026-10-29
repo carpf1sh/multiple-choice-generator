@@ -319,6 +319,23 @@ test('performanceStats weights recent tests more and pulls thin estimates toward
   assert.equal(one.trend, null);
 });
 
+test('demoAttempts moves every date so the latest test is an hour old, keeping the gaps', () => {
+  const now = Date.UTC(2030, 0, 10, 12);
+  const records = [
+    { examId: 'other', kind: 'new', startedAt: 9_000, endedAt: 10_000, questions: [] },
+    { kind: 'retake', endedAt: 5_000, questions: [] },
+    { kind: 'new', endedAt: 20_000 },  // no questions: dropped
+    null,
+  ];
+  const out = plain(app.demoAttempts(records, 'sample', now));
+  assert.deepEqual(out.map((a) => [a.examId, a.kind]), [['sample', 'retake'], ['sample', 'new']]);
+  assert.equal(out[1].endedAt, now - 3600e3);
+  assert.equal(out[1].endedAt - out[1].startedAt, 1_000);
+  assert.equal(out[1].endedAt - out[0].endedAt, 5_000);
+  assert.equal(out[0].startedAt, out[0].endedAt);  // a missing start falls back to the end
+  assert.deepEqual(plain(app.demoAttempts({}, 'sample', now)), []);
+});
+
 test('recommendations rank weak domains by what they cost on the exam', () => {
   const rows = [
     ['D1-1', 'D1', false, 'OSI'], ['D1-2', 'D1', false, 'OSI'], ['D1-3', 'D1', true, 'Routing'],
