@@ -295,3 +295,23 @@ test('uploadManifest appends a batch or replaces them all, keeping other fields'
   assert.equal(replaced.total_questions, 5);
   assert.equal(replaced.manifest_version, '1.0');
 });
+
+test('checkUpload skips questions over the editor\'s length limits', () => {
+  const [good] = plain(m.uploadTemplate(exam));
+  const L = m.LIMITS;
+  const cases = [
+    [{ scenario_stem: 's'.repeat(L.stem + 1) }, /question is too long/],
+    [{ subtopic: 's'.repeat(L.subtopic + 1) }, /subtopic is too long/],
+    [{ objective: '1'.repeat(L.objective + 1) }, /objective is too long/],
+    [{ options: { ...good.options, C: 'o'.repeat(L.option + 1) } }, /option C is too long/],
+    [{ explanation: 'e'.repeat(L.explanation + 1) }, /explanation is too long/],
+    [{ explanation: { correct: 'ok', distractors: { A: 'n'.repeat(L.note + 1) } } }, /note for option A is too long/],
+  ];
+  for (const [over, re] of cases) {
+    const r = plain(m.checkUpload([{ ...good, ...over }], exam, [], 'append'));
+    assert.equal(r.questions.length, 0, String(re));
+    assert.match(r.skipped[0], re);
+  }
+  const atLimit = { ...good, scenario_stem: 's'.repeat(L.stem), options: { ...good.options, A: 'o'.repeat(L.option) } };
+  assert.equal(plain(m.checkUpload([atLimit], exam, [], 'append')).questions.length, 1);
+});

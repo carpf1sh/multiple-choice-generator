@@ -175,6 +175,17 @@ function uploadTemplate(exam, ids = []) {
   });
 }
 
+// The first field of a normalized question over the editor's length limits, as a message.
+function uploadTooLong(q) {
+  return tooLong('The question', q.stem, LIMITS.stem)
+    || tooLong('The subtopic', q.subtopic, LIMITS.subtopic)
+    || tooLong('The objective', q.objective, LIMITS.objective)
+    || tooLong('The explanation', q.explanation, LIMITS.explanation)
+    || q.letters.map((L) => tooLong(`Option ${L}`, q.options[L], LIMITS.option)
+      || (q.distractors[L] != null && tooLong(`The note for option ${L}`, q.distractors[L], LIMITS.note))).find(Boolean)
+    || '';
+}
+
 // Sorts an uploaded batch into the questions to save and the ones to skip.
 // Questions without an id get the bank's next free one; when mode is 'append',
 // ids already in the bank are skipped so an upload can't silently replace them.
@@ -202,6 +213,8 @@ function checkUpload(data, exam, ids, mode) {
     const q = normalize(raw, '', i);
     if (!q) return skip('missing its question text or options, has fewer than 2 options, or its answer isn\'t one of the option letters.');
     if (!known.has(q.domainKey)) return skip(`its domain (${q.domainKey || 'none'}) isn't one of this test's domains.`);
+    const long = uploadTooLong(q);
+    if (long) return skip(long.charAt(0).toLowerCase() + long.slice(1));
     if (seen.has(q.id)) return skip(`the id ${q.id} appears earlier in the file.`);
     if (existing.has(q.id)) return skip(`the id ${q.id} is already in the bank.`);
     seen.add(q.id);
