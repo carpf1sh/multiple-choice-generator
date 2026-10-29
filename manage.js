@@ -668,9 +668,13 @@ function renderUpload() {
             Domains: ${domains}.</div>
         </div>
         <div>
-          <label class="field" for="u-file">Question file</label>
-          <input type="file" id="u-file" accept=".json,application/json" ${ro ? 'disabled' : ''}>
-          ${u.fileName ? `<div class="field-help">Selected: ${esc(u.fileName)}</div>` : ''}
+          <span class="field">Question file</span>
+          <label class="dropzone${ro ? ' is-disabled' : ''}" id="u-drop" for="u-file">
+            <input type="file" id="u-file" accept=".json,application/json" ${ro ? 'disabled' : ''}>
+            ${u.fileName
+              ? `<b>${esc(u.fileName)}</b><span class="muted small">Drop another file here or click to choose a different one.</span>`
+              : `<b>Drop a JSON file here</b><span class="muted small">or click to choose one.</span>`}
+          </label>
         </div>
         <div>
           <span class="field">Add them by</span>
@@ -699,6 +703,19 @@ function renderUpload() {
   if (ro) return;
   $('#cancel-2').addEventListener('click', renderExam);
   $('#u-file').addEventListener('change', (e) => readUpload(e.target.files[0]));
+  const drop = $('#u-drop');
+  // dragleave also fires when moving over the zone's children, so count enters.
+  let depth = 0;
+  drop.addEventListener('dragenter', (e) => { e.preventDefault(); depth++; drop.classList.add('is-over'); });
+  drop.addEventListener('dragover', (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
+  drop.addEventListener('dragleave', () => { if (--depth <= 0) { depth = 0; drop.classList.remove('is-over'); } });
+  drop.addEventListener('drop', (e) => {
+    e.preventDefault();
+    depth = 0;
+    drop.classList.remove('is-over');
+    const file = e.dataTransfer.files[0];
+    if (file) readUpload(file);
+  });
   app().querySelectorAll('input[name="u-mode"]').forEach((r) => r.addEventListener('change', () => {
     u.mode = r.value;
     checkSelected();
@@ -1060,5 +1077,10 @@ async function init() {
 window.addEventListener('beforeunload', (e) => {
   if (state.view === 'edit' && state.dirty) e.preventDefault();
 });
+
+// A file dropped just outside the upload drop zone would otherwise open in the tab.
+for (const type of ['dragover', 'drop']) {
+  window.addEventListener(type, (e) => { if (state.view === 'upload') e.preventDefault(); });
+}
 
 init();
