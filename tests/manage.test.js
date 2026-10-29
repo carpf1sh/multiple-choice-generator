@@ -217,6 +217,20 @@ test('newExamFiles appends to the shared registry in its existing shape', () => 
   assert.equal(plain(m.newExamFiles(newTest(), [{ id: 'a' }]).files[0].data).length, 2, 'bare-array registry stays an array');
 });
 
+test('newExamFiles starts the test with an uploaded batch when given one', () => {
+  const t = newTest();
+  const ex = m.newExamEntry(t);
+  const { questions } = m.checkUpload(m.uploadTemplate(ex), ex, [], 'append');
+  const { files } = m.newExamFiles(t, null, { file: 'first_batch.json', data: { batch_id: 'b', questions } });
+  assert.equal(files[2].path, 'private/first_batch.json');
+  assert.deepEqual(plain(files[1].data), {
+    manifest_version: '1.0', total_questions: 2,
+    batches: [{ batch_id: 'first_batch', file_name: 'first_batch.json', item_count: 2 }],
+  });
+  assert.equal(plain(files[2].data).questions.length, 2, 'the batch keeps its { questions } shape');
+  assert.deepEqual(plain(questions.map((q) => q.id)), ['NET-BASICS-D1-001', 'NET-BASICS-D2-001']);
+});
+
 /* ---------- Uploading batches ---------- */
 
 const sampleExam = () => readJson('exams.json').exams.find((e) => e.id === 'sample');
