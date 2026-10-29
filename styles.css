@@ -325,6 +325,11 @@ textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; 
 .filter-bar { margin-bottom: .75rem; flex-wrap: nowrap; }
 .filter-bar input { flex: 1; min-width: 0; }
 .q-table td { vertical-align: top; }
+.q-table .q-subtopic { width: 22%; overflow-wrap: anywhere; }
+.q-table .q-actions { width: 1%; }
+.q-action-stack { display: flex; flex-direction: column; gap: .35rem; }
+.q-action-stack .btn { justify-content: flex-start; white-space: nowrap; }
+.icon { width: 1em; height: 1em; flex-shrink: 0; }
 .nowrap { white-space: nowrap; }
 @media (max-width: 640px) {
   .q-table th:nth-child(3), .q-table td:nth-child(3) { display: none; }
