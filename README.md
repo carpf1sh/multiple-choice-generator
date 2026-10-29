@@ -107,6 +107,24 @@ Then open <http://localhost:47823>. On Windows the command is usually `python` r
 - Attempts store question ids and letters only, and are rebuilt from the current bank when you open them. A question that has since been removed, or whose answer changed, still counts toward the score but is shown as unavailable and left out of retakes.
 - The last 100 finished tests are kept. **Clear test history** deletes them for the current exam.
 
+**Performance and focus recommendations**
+
+Open **Performance** from the setup, results or Test history screen to see how you're doing on the current exam across every saved test:
+
+- **Where to focus next**: up to three domains to practise, each with its weakest subtopics, why it was picked (estimated score, share of the exam, recent trend) and a **Practise this domain** button that sets up a single-domain test focused on the questions you missed. **Build a test with these weights** fills in *Custom* weights that put more questions where you stand to lose the most. The setup screen shows the suggested domains too.
+- **Score per test**: a line chart of each test's score against the pass mark (70%), for all domains or one. Hover a point for its date and counts.
+- **Domain by test**: a grid of the latest 12 tests, one row per domain, showing the % right in each. Cells are neutral at the pass mark and turn green above it and red below.
+- **By domain** and **By subtopic**: correct/total, score, the change between your last 3 tests and the ones before, and a status (*Strong*, *On track*, *Needs work*, *Not practised*). Subtopics are grouped under their domain, and those in recommended domains are expanded.
+
+How the recommendations are worked out:
+
+1. Each domain and subtopic gets an estimated score. Recent tests count more: an answer 5 tests back counts half as much as one from the latest test. The estimate starts from 3 "average" answers (your overall average for a domain, the domain's estimate for a subtopic), so one lucky or unlucky question doesn't decide it.
+2. Domains are ranked by exam weight × (1 − estimate): the share of the exam they're likely to cost you. Subtopics are ranked the same way, using their share of the domain's questions in the bank.
+3. A domain or subtopic is recommended when it's not practised yet, or when both its estimate and its plain score are below the pass mark. If everything passes, the domain with the most left to gain is shown instead.
+4. The recommended weights split 100 across domains in proportion to that ranking (at least 1 each).
+
+Tests saved before this feature didn't record subtopics; their answers are matched to each question's current subtopic in the bank.
+
 **Managing tests**
 
 Click **Manage tests** on the setup screen (or open `/manage.html`). Changes are written to the JSON files on disk through the local server, so the online copy can only browse.
@@ -307,6 +325,7 @@ init()
 | `largestRemainder`, `allocate` | Selection engine | Per-domain quotas and shortfall redistribution |
 | `priorityScore`, `orderByPriority` | Selection engine | Ranks questions using local history |
 | `interleave`, `pickFromDomain` | Selection engine | Round-robin across objectives and subtopics |
+| `performanceStats`, `recommendations` | Performance | Per-domain and per-subtopic scores, trends and the ranked focus list |
 | `renderSetup`, `renderTest`, `renderResults` | Screens | Render each screen and bind its events |
 | `store` | Storage (`shared.js`) | `localStorage` wrapper that never throws, so the app still works when storage is blocked |
 | `toRawQuestion`, `upsertQuestion`, `removeQuestion`, `updateManifestCounts`, `newExamFiles`, `checkUpload`, `uploadManifest` | `manage.js` | Turn the editor's changes into updated batch, manifest and registry files |
@@ -337,7 +356,7 @@ Everything stays in your browser's `localStorage`, scoped to the server's origin
 |---|---|
 | `mcq.settings` | Last-used setup options, the selected exam, and custom weights for each exam |
 | `mcq.history` | Per-question `seen`, `wrong`, `lastWrong`, `last` (timestamp) |
-| `mcq.attempts` | Test history: the last 100 finished tests, each with its exam, timings, options and per-question id, domain, chosen and correct letter (and option order when shuffled) |
+| `mcq.attempts` | Test history: the last 100 finished tests, each with its exam, timings, options and per-question id, domain, subtopic, chosen and correct letter (and option order when shuffled) |
 | `mcq.theme` | `light` or `dark` |
 
 - **Reset history** on the setup screen clears `mcq.history`; your test history is kept.
@@ -372,7 +391,7 @@ python -m unittest discover -s tests
 
 | File | Covers |
 |---|---|
-| `tests/app.test.js` | Question validation and escaping, the largest-remainder split and shortfall redistribution, history priority, subtopic round-robin, answer shuffling, and saving and restoring test history. `tests/load-app.js` loads `shared.js` and `app.js` (or `manage.js`) unchanged into a minimal fake browser. |
+| `tests/app.test.js` | Question validation and escaping, the largest-remainder split and shortfall redistribution, history priority, subtopic round-robin, answer shuffling, saving and restoring test history, and performance stats and focus recommendations. `tests/load-app.js` loads `shared.js` and `app.js` (or `manage.js`) unchanged into a minimal fake browser. |
 | `tests/manage.test.js` | The test manager's file changes: questions built from the editor pass validation and keep unknown fields, batch files keep their shape, ids continue the numbering, manifest counts stay right, new tests produce valid registry, manifest and batch files, and uploads skip invalid, unknown-domain and duplicate questions, name batches safely, and append to or replace the manifest's batches. |
 | `tests/repo.test.js` | Every exam in `exams.json` and every question in its bank is valid, has a unique id and a known domain. The app references no external hosts. |
 | `tests/test_server.py` | `server.pyw` refuses foreign `Host` headers, never serves dotfiles (including encoded paths), doesn't list folders, and stays inside its folder. Saving works in the allowed places and is refused for foreign hosts or origins, wrong content types, oversized bodies, traversal, dotfiles, non-JSON files and other folders, without writing anything. |

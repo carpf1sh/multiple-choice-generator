@@ -7,6 +7,7 @@
 
 const MAX_QUESTIONS = 200;
 const MAX_ATTEMPTS = 100;  // finished tests kept in test history, across all exams
+const PASS_MARK = 70;      // percent; scores at or above it are shown as passing
 
 const DEFAULT_SETTINGS = {
   examId: null,
@@ -33,6 +34,7 @@ const state = {
   test: null,
   timer: null,
   reviewFilter: 'all',
+  perfDomain: 'all',       // domain shown in the performance trend chart
 };
 
 const saveSettings = () => store.set(KEYS.settings, state.settings);
@@ -337,6 +339,7 @@ function renderSetup() {
         <h2>Question bank</h2>
         <div class="row">
           <button class="btn btn-sm" id="show-history" type="button">Test history</button>
+          <button class="btn btn-sm" id="show-performance" type="button">Performance</button>
           <a class="btn btn-sm" href="manage.html">Manage tests</a>
           <button class="btn btn-sm" id="reload-bank" type="button">↻ Reload bank</button>
         </div>
@@ -352,6 +355,7 @@ function renderSetup() {
         <thead><tr><th>Domain</th><th class="num">Questions</th><th>Bank share vs exam weight</th><th class="num">Share / weight</th></tr></thead>
         <tbody>${domainRows}</tbody>
       </table>
+      ${focusNotice()}
       ${warnings}
     </section>
 
@@ -516,6 +520,8 @@ function bindSetup() {
   });
 
   $('#show-history').addEventListener('click', renderHistory);
+  $('#show-performance').addEventListener('click', renderPerformance);
+  $('#focus-link')?.addEventListener('click', renderPerformance);
 
   $('#reload-bank').addEventListener('click', async () => {
     app().innerHTML = '<div class="loading">Reloading question bank…</div>';
@@ -771,7 +777,7 @@ function renderResults() {
     return `<tr>
       <td><span class="dkey">${esc(d.key)}</span>${esc(d.name)}</td>
       <td class="num">${c}/${rs.length}</td>
-      <td class="bar-cell"><div class="bar"><span style="width:${p}%;background:${p >= 70 ? 'var(--good)' : 'var(--bad)'}"></span></div></td>
+      <td class="bar-cell"><div class="bar"><span style="width:${p}%;background:${p >= PASS_MARK ? 'var(--good)' : 'var(--bad)'}"></span></div></td>
       <td class="num">${p}%</td>
       <td class="num muted">${weightSum ? Math.round((d.weight / weightSum) * 100) : 0}%</td>
     </tr>`;
@@ -780,7 +786,7 @@ function renderResults() {
   app().innerHTML = `
     <section class="card">
       <div class="score-hero">
-        <div class="score-big ${score >= 70 ? 'pass' : 'fail'}">${score}%</div>
+        <div class="score-big ${score >= PASS_MARK ? 'pass' : 'fail'}">${score}%</div>
         <div>
           <div><b>${correct}</b> of <b>${n}</b> correct${skipped ? ` · ${skipped} unanswered` : ''}</div>
           <div class="muted">Time ${formatDuration(t.endedAt - t.startedAt)} · ${t.feedback === 'immediate' ? 'Immediate feedback' : 'Feedback at end'} · ${t.allowSkip ? 'Skipping allowed' : 'No skipping'}${t.shuffleOptions ? ' · Choices shuffled' : ''}</div>
@@ -793,6 +799,7 @@ function renderResults() {
         <button class="btn" id="retake" type="button" ${retakeable.length ? '' : 'disabled'}>Retake same questions</button>
         <button class="btn" id="retry-missed" type="button" ${missed.length ? '' : 'disabled'}>Practice the ${missed.length} missed</button>
         <button class="btn" id="to-history" type="button">${t.fromHistory ? '← Back to history' : 'Test history'}</button>
+        <button class="btn" id="to-performance" type="button">Performance</button>
       </div>
     </section>
 
@@ -827,6 +834,7 @@ function renderResults() {
   $('#retake').addEventListener('click', () => startTest(retakeable, 'retake'));
   $('#retry-missed').addEventListener('click', () => startTest(shuffle(missed.map((r) => r.q)), 'missed'));
   $('#to-history').addEventListener('click', renderHistory);
+  $('#to-performance').addEventListener('click', renderPerformance);
 }
 
 function filterBtn(value, label) {
@@ -889,6 +897,7 @@ function attemptRecord(t, examId) {
     questions: t.questions.map((q, i) => ({
       id: q.id,
       domain: q.domainKey,
+      subtopic: q.subtopic,
       chosen: t.answers[i],
       answer: q.answer,
       ...(q.optionOrder ? { order: q.optionOrder } : {}),
@@ -920,7 +929,7 @@ function restoreAttempt(a) {
     const sameLetters = (o) => Array.isArray(o) && o.length === base.letters.length && [...o].sort().join() === base.letters.join();
     let q = base && (r.order ? sameLetters(r.order) && shuffleOptions(base, r.order) : base);
     if (!q || q.answer !== r.answer) {
-      q = { id: r.id, domainKey: r.domain, subtopic: '', objective: '', stem: '', options: {}, letters: [], answer: r.answer, explanation: '', distractors: {}, unavailable: true };
+      q = { id: r.id, domainKey: r.domain, subtopic: r.subtopic || '', objective: '', stem: '', options: {}, letters: [], answer: r.answer, explanation: '', distractors: {}, unavailable: true };
     }
     return q;
   });
@@ -949,7 +958,7 @@ function renderHistory() {
   const summaries = attempts.map(attemptSummary);
   const scores = summaries.map((s) => s.score);
   const avg = (xs) => (xs.length ? Math.round(xs.reduce((a, b) => a + b, 0) / xs.length) : 0);
-  const scoreBar = (p) => `<div class="bar"><span style="width:${p}%;background:${p >= 70 ? 'var(--good)' : 'var(--bad)'}"></span></div>`;
+  const scoreBar = (p) => `<div class="bar"><span style="width:${p}%;background:${p >= PASS_MARK ? 'var(--good)' : 'var(--bad)'}"></span></div>`;
 
   // Domain totals across every recorded test for this exam.
   const byDomain = {};
@@ -986,7 +995,10 @@ function renderHistory() {
     <section class="card">
       <div class="card-head">
         <h2>Test history</h2>
-        <button class="btn btn-sm" id="history-back" type="button">← Back</button>
+        <div class="row">
+          <button class="btn btn-sm" id="history-performance" type="button">Performance</button>
+          <button class="btn btn-sm" id="history-back" type="button">← Back</button>
+        </div>
       </div>
       ${attempts.length ? `
       <div class="stat-line">
@@ -1015,6 +1027,7 @@ function renderHistory() {
     </section>` : ''}`;
 
   $('#history-back').addEventListener('click', renderSetup);
+  $('#history-performance').addEventListener('click', renderPerformance);
   app().querySelectorAll('[data-attempt]').forEach((b) => b.addEventListener('click', () => {
     state.test = restoreAttempt(attempts[Number(b.dataset.attempt)]);
     state.reviewFilter = 'all';
@@ -1026,6 +1039,385 @@ function renderHistory() {
     state.attempts = state.attempts.filter((a) => a.examId !== state.exam.id);
     saveAttempts();
     renderHistory();
+  });
+  window.scrollTo(0, 0);
+}
+
+/* =====================================================================
+ * Performance
+ * Accuracy per domain and subtopic across every saved test for an exam,
+ * and a ranked list of where to focus next. Recent tests count more, and
+ * estimates built on few answers are pulled toward the wider average so a
+ * single miss doesn't top the list.
+ * ===================================================================== */
+
+const RECENCY_HALF_LIFE = 5; // tests: an answer five tests back counts half as much as one from the latest
+const PRIOR_ANSWERS = 3;     // how many "average" answers each estimate starts with
+const RECENT_TESTS = 3;      // the trend compares these latest tests with the ones before
+const MAX_FOCUS = 3;         // domains recommended at most
+const HEATMAP_TESTS = 12;    // latest tests shown in the domain-by-test grid
+const subtopicKey = (s) => String(s || 'General').trim().toLowerCase();
+
+function tally() {
+  return { correct: 0, total: 0, wCorrect: 0, wTotal: 0, recent: { correct: 0, total: 0 }, earlier: { correct: 0, total: 0 } };
+}
+
+function addAnswer(t, right, w, recent) {
+  t.total++;
+  t.wTotal += w;
+  const part = recent ? t.recent : t.earlier;
+  part.total++;
+  if (right) { t.correct++; t.wCorrect += w; part.correct++; }
+}
+
+// Recency-weighted accuracy (0–1), smoothed toward prior.
+const estimate = (t, prior) => (t.wCorrect + PRIOR_ANSWERS * prior) / (t.wTotal + PRIOR_ANSWERS);
+
+// Change in points between the latest tests and the ones before, when both have enough answers.
+const trendOf = (t) => (t.recent.total >= 3 && t.earlier.total >= 3
+  ? pct(t.recent.correct, t.recent.total) - pct(t.earlier.correct, t.earlier.total) : null);
+
+// Weak only when both the estimate and the plain score are below the pass mark,
+// so a perfect record in a weak domain isn't flagged.
+function statusOf(t, mastery) {
+  if (!t.total) return 'unpractised';
+  const p = mastery * 100;
+  if (p >= PASS_MARK + 15) return 'strong';
+  return p >= PASS_MARK || pct(t.correct, t.total) >= PASS_MARK ? 'ok' : 'weak';
+}
+
+// attempts: oldest first, all for one exam. questions: the current bank.
+function performanceStats(attempts, questions, domains) {
+  const bank = new Map(questions.map((q) => [q.id, q]));
+  const weightSum = domains.reduce((s, d) => s + (Number(d.weight) || 0), 0);
+  const byDomain = new Map(domains.map((d) => [d.key, { ...tally(), bank: 0, subtopics: new Map() }]));
+  const subtopicOf = (d, name) => {
+    const k = subtopicKey(name);
+    if (!d.subtopics.has(k)) d.subtopics.set(k, { name: String(name || 'General').trim(), bank: 0, ...tally() });
+    return d.subtopics.get(k);
+  };
+  for (const q of questions) {
+    const d = byDomain.get(q.domainKey);
+    if (!d) continue;
+    d.bank++;
+    subtopicOf(d, q.subtopic).bank++;
+  }
+
+  const overall = tally();
+  const n = attempts.length;
+  const tests = attempts.map((a, i) => {
+    const w = 0.5 ** ((n - 1 - i) / RECENCY_HALF_LIFE);
+    const recent = i >= n - RECENT_TESTS;
+    const per = {};
+    for (const r of a.questions) {
+      const d = byDomain.get(r.domain);
+      if (!d) continue;
+      const right = r.chosen === r.answer;
+      addAnswer(overall, right, w, recent);
+      addAnswer(d, right, w, recent);
+      // Tests saved before subtopics were recorded fall back to the question's current subtopic.
+      addAnswer(subtopicOf(d, r.subtopic ?? bank.get(r.id)?.subtopic), right, w, recent);
+      const p = (per[r.domain] ||= { correct: 0, total: 0 });
+      p.total++;
+      if (right) p.correct++;
+    }
+    return { endedAt: a.endedAt, kind: a.kind, ...attemptSummary(a), byDomain: per };
+  });
+
+  const overallMastery = overall.wTotal ? overall.wCorrect / overall.wTotal : 0.5;
+  const out = domains.map((d) => {
+    const t = byDomain.get(d.key);
+    const share = weightSum ? (Number(d.weight) || 0) / weightSum : 1 / domains.length;
+    const mastery = estimate(t, overallMastery);
+    const subs = [...t.subtopics.values()];
+    const subtopics = subs.map((s) => {
+      const sm = estimate(s, mastery);
+      // A subtopic's part of the domain follows its part of the bank (or of the answers, for an empty bank).
+      const part = t.bank ? s.bank / t.bank : t.total ? s.total / t.total : 1 / subs.length;
+      return {
+        name: s.name, bank: s.bank, correct: s.correct, total: s.total,
+        accuracy: pct(s.correct, s.total), mastery: sm, trend: trendOf(s), status: statusOf(s, sm),
+        priority: share * part * (1 - sm),
+      };
+    }).sort((a, b) => b.priority - a.priority || a.name.localeCompare(b.name));
+    return {
+      key: d.key, name: d.name, share, bank: t.bank, correct: t.correct, total: t.total,
+      accuracy: pct(t.correct, t.total), mastery, trend: trendOf(t), status: statusOf(t, mastery),
+      // Expected share of the exam lost in this domain at the current level.
+      priority: share * (1 - mastery),
+      subtopics,
+    };
+  });
+
+  return {
+    tests,
+    overall: { correct: overall.correct, total: overall.total, accuracy: pct(overall.correct, overall.total), trend: trendOf(overall) },
+    domains: out,
+  };
+}
+
+// Domains (with their weakest subtopics) to practise next, most at stake first,
+// and test weights that put more questions where more is at stake.
+function recommendations(stats) {
+  const ranked = stats.domains.filter((d) => d.bank || d.total).slice().sort((a, b) => b.priority - a.priority);
+  const needsWork = (x) => x.status === 'weak' || x.status === 'unpractised';
+  const focus = ranked.filter(needsWork).slice(0, MAX_FOCUS)
+    .map((d) => ({ ...d, subtopics: d.subtopics.filter(needsWork).slice(0, 3) }));
+  // Nothing below the pass mark: point at the domain with the most still to gain.
+  if (!focus.length && ranked.length) focus.push({ ...ranked[0], subtopics: ranked[0].subtopics.slice(0, 2), polish: true });
+  const weights = largestRemainder(100, ranked.map((d) => [d.key, d.priority]));
+  ranked.forEach((d) => { weights[d.key] = Math.max(1, weights[d.key]); });
+  return { focus, weights };
+}
+
+const trendText = (t) => (t > 0 ? `up ${t} pts recently` : t < 0 ? `down ${-t} pts recently` : 'flat recently');
+
+function focusReason(d) {
+  if (!d.total) return `Not practised yet · ${Math.round(d.share * 100)}% of the exam`;
+  const parts = [`${Math.round(d.mastery * 100)}% estimated (${d.correct}/${d.total} right)`, `${Math.round(d.share * 100)}% of the exam`];
+  if (d.trend != null) parts.push(trendText(d.trend));
+  return parts.join(' · ');
+}
+
+const STATUS_BADGES = {
+  strong: '<span class="badge good">Strong</span>',
+  ok: '<span class="badge info">On track</span>',
+  weak: '<span class="badge bad">Needs work</span>',
+  unpractised: '<span class="badge skip">Not practised</span>',
+};
+
+const trendCell = (t) => (t == null ? '<span class="muted">–</span>'
+  : `<span class="${t > 0 ? 'trend-up' : t < 0 ? 'trend-down' : 'muted'}" title="${esc(trendText(t))}">${t > 0 ? '▲' : t < 0 ? '▼' : '▬'} ${Math.abs(t)}</span>`);
+
+// One line on the setup screen pointing at the domains to work on.
+function focusNotice() {
+  const attempts = examAttempts();
+  if (!attempts.length) return '';
+  const { focus } = recommendations(performanceStats(attempts, state.questions, state.exam.domains));
+  if (!focus.length) return '';
+  const names = focus.map((d) => `<b>${esc(d.key)}</b> ${esc(shortName(d.name))}`).join(', ');
+  return `<div class="notice notice-info">${focus[0].polish ? 'Every domain is at or above the pass mark. Most left to gain in' : 'Suggested focus:'} ${names}.
+    <button class="link-btn" id="focus-link" type="button">See performance →</button></div>`;
+}
+
+// Score per test as a line, with the pass mark dashed. points: [{ score, label, title }]
+// width is the space the chart gets, so its text stays readable on narrow screens.
+function trendChart(points, width = 640) {
+  const W = clamp(Math.round(width) || 640, 300, 640), H = W < 480 ? 180 : 210, L = 38, R = 14, T = 14, B = 26;
+  const x = (i) => L + (points.length > 1 ? (i * (W - L - R)) / (points.length - 1) : (W - L - R) / 2);
+  const y = (v) => T + ((100 - v) * (H - T - B)) / 100;
+  const grid = [0, 25, 50, 75, 100].map((v) => `
+    <line class="grid" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/>
+    <text class="axis" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}%</text>`).join('');
+  const pass = `<line class="pass" x1="${L}" x2="${W - R}" y1="${y(PASS_MARK)}" y2="${y(PASS_MARK)}"/>
+    <text class="axis" x="${L + 6}" y="${y(PASS_MARK) - 5}">Pass ${PASS_MARK}%</text>`;
+  const line = points.length > 1
+    ? `<polyline class="line" points="${points.map((p, i) => `${x(i)},${y(p.score)}`).join(' ')}"/>` : '';
+  const dots = points.map((p, i) => `<g class="pt">
+      <circle class="hit" cx="${x(i)}" cy="${y(p.score)}" r="12"/>
+      <circle class="dot" cx="${x(i)}" cy="${y(p.score)}" r="4.5"/>
+      <title>${esc(p.title)}</title></g>`).join('');
+  const last = points.at(-1);
+  if (!last) return '<div class="empty">No tests yet.</div>';
+  const n = points.length;
+  const lastLabel = `<text class="value" x="${x(n - 1)}" y="${y(last.score) + (last.score > 90 ? 20 : -10)}" text-anchor="${n > 1 ? 'end' : 'middle'}">${last.score}%</text>`;
+  const ticks = n > 1
+    ? `<text class="axis" x="${x(0)}" y="${H - 6}">${esc(points[0].label)}</text>
+       <text class="axis" x="${x(n - 1)}" y="${H - 6}" text-anchor="end">${esc(last.label)}</text>`
+    : `<text class="axis" x="${x(0)}" y="${H - 6}" text-anchor="middle">${esc(last.label)}</text>`;
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Score per test">${grid}${pass}${line}${dots}${lastLabel}${ticks}</svg>`;
+}
+
+// Cell colour: neutral at the pass mark, deeper green above it and deeper red below.
+// The plain background is the fallback for browsers without color-mix().
+function heatStyle(p) {
+  const above = p >= PASS_MARK;
+  const amount = Math.round(42 * (above ? (p - PASS_MARK) / (100 - PASS_MARK) : (PASS_MARK - p) / PASS_MARK));
+  return `background:var(--surface-2);background:color-mix(in srgb, var(--${above ? 'good' : 'bad'}) ${amount}%, var(--surface-2))`;
+}
+
+function heatmap(stats) {
+  const offset = Math.max(0, stats.tests.length - HEATMAP_TESTS);
+  const tests = stats.tests.slice(offset);
+  const head = tests.map((t, i) => `<th class="num" title="${esc(formatDate(t.endedAt))}">#${offset + i + 1}</th>`).join('');
+  const cell = (r, label) => {
+    if (!r || !r.total) return '<td class="heat empty" title="Not in this test">·</td>';
+    const p = pct(r.correct, r.total);
+    return `<td class="heat" style="${heatStyle(p)}" title="${esc(`${label}: ${r.correct}/${r.total} right (${p}%)`)}">${p}</td>`;
+  };
+  const rows = stats.domains.filter((d) => d.total).map((d) => `<tr>
+      <th scope="row"><span class="dkey">${esc(d.key)}</span><span class="heat-name">${esc(shortName(d.name))}</span></th>
+      ${tests.map((t, i) => cell(t.byDomain[d.key], `Test #${offset + i + 1}, ${d.key}`)).join('')}
+    </tr>`).join('');
+  const overall = `<tr class="heat-total"><th scope="row">All domains</th>
+      ${tests.map((t, i) => cell(t, `Test #${offset + i + 1}`)).join('')}</tr>`;
+  return `<div class="heat-wrap"><table class="heatmap">
+      <thead><tr><th>Domain</th>${head}</tr></thead>
+      <tbody>${rows}${overall}</tbody>
+    </table></div>
+    <div class="heat-legend small muted">
+      <span class="heat-swatch" style="${heatStyle(0)}"></span>Below pass
+      <span class="heat-swatch" style="${heatStyle(PASS_MARK)}"></span>${PASS_MARK}%
+      <span class="heat-swatch" style="${heatStyle(100)}"></span>Above
+      <span class="spacer"></span>${stats.tests.length > HEATMAP_TESTS ? `Latest ${HEATMAP_TESTS} tests. ` : ''}Cells show the % right; hover for counts.
+    </div>`;
+}
+
+function renderPerformance() {
+  stopTimer();
+  state.test = null;
+  const attempts = examAttempts();
+  const back = '<button class="btn btn-sm" id="perf-back" type="button">← Back</button>';
+
+  if (!attempts.length) {
+    app().innerHTML = `<section class="card">
+      <div class="card-head"><h2>Performance</h2>${back}</div>
+      <div class="empty">No finished tests for this exam yet. Take a test and your results by domain and subtopic, with suggestions on what to practise, will show up here.</div>
+    </section>`;
+    $('#perf-back').addEventListener('click', renderSetup);
+    window.scrollTo(0, 0);
+    return;
+  }
+
+  const stats = performanceStats(attempts, state.questions, state.exam.domains);
+  const { focus, weights } = recommendations(stats);
+  if (!stats.domains.some((d) => d.total && d.key === state.perfDomain)) state.perfDomain = 'all';
+  const sel = state.perfDomain;
+  const points = stats.tests.map((t, i) => ({ t, i, r: sel === 'all' ? t : t.byDomain[sel] }))
+    .filter((p) => p.r && p.r.total)
+    .map(({ t, i, r }) => {
+      const score = pct(r.correct, r.total);
+      return {
+        score,
+        label: new Date(t.endedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+        title: `Test #${i + 1} · ${formatDate(t.endedAt)} · ${r.correct}/${r.total} right (${score}%)`,
+      };
+    });
+
+  const focusItems = focus.map((d) => `<li class="focus-item">
+      <div class="focus-head">
+        <span><span class="dkey">${esc(d.key)}</span><b>${esc(d.name)}</b></span>
+        ${STATUS_BADGES[d.status]}
+        <span class="spacer"></span>
+        <button class="btn btn-sm" type="button" data-drill="${esc(d.key)}">Practise this domain</button>
+      </div>
+      <div class="muted small">${esc(focusReason(d))}</div>
+      ${d.subtopics.length ? `<div class="focus-subs"><span class="muted small">${d.polish ? 'Lowest subtopics:' : 'Weakest subtopics:'}</span>
+        ${d.subtopics.map((s) => `<span class="chip" title="${esc(s.total ? `${s.correct}/${s.total} right` : 'Not practised yet')}">${esc(s.name)} <b>${s.total ? `${s.accuracy}%` : 'new'}</b></span>`).join('')}</div>` : ''}
+    </li>`).join('');
+
+  const weightChips = stats.domains.filter((d) => weights[d.key] != null)
+    .map((d) => `<span class="chip" title="${esc(d.name)}">${esc(d.key)} <b>${weights[d.key]}</b></span>`).join('');
+
+  const bar = (p) => `<div class="bar"><span style="width:${p}%;background:${p >= PASS_MARK ? 'var(--good)' : 'var(--bad)'}"></span><i style="left:${PASS_MARK}%"></i></div>`;
+  const scoreCells = (x) => `
+      <td class="num">${x.total ? `${x.correct}/${x.total}` : '–'}</td>
+      <td class="bar-cell">${x.total ? bar(x.accuracy) : ''}</td>
+      <td class="num">${x.total ? `${x.accuracy}%` : '–'}</td>
+      <td class="num">${trendCell(x.trend)}</td>`;
+
+  const domainRows = stats.domains.map((d) => `<tr>
+      <td><span class="dkey">${esc(d.key)}</span>${esc(d.name)}</td>
+      ${scoreCells(d)}
+      <td class="num muted">${Math.round(d.share * 100)}%</td>
+      <td class="num">${STATUS_BADGES[d.status]}</td>
+    </tr>`).join('');
+
+  // Lowest scores first; subtopics not practised yet go last.
+  const byScore = (a, b) => (a.total ? a.accuracy : 101) - (b.total ? b.accuracy : 101) || a.name.localeCompare(b.name);
+  const focusKeys = new Set(focus.map((d) => d.key));
+  const subtopicSections = stats.domains.filter((d) => d.subtopics.length).map((d) => `
+    <details class="sub-domain" ${focusKeys.has(d.key) ? 'open' : ''}>
+      <summary><span class="dkey">${esc(d.key)}</span>${esc(d.name)} <span class="muted small">· ${d.subtopics.length} subtopic${d.subtopics.length === 1 ? '' : 's'}</span></summary>
+      <table class="domain-table perf-table">
+        <thead><tr><th>Subtopic</th><th class="num">Correct</th><th></th><th class="num">Score</th><th class="num">Trend</th><th class="num">In bank</th><th class="num">Status</th></tr></thead>
+        <tbody>${d.subtopics.slice().sort(byScore).map((s) => `<tr>
+          <td>${esc(s.name)}</td>
+          ${scoreCells(s)}
+          <td class="num muted">${s.bank}</td>
+          <td class="num">${STATUS_BADGES[s.status]}</td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </details>`).join('');
+
+  const domainOptions = stats.domains.filter((d) => d.total)
+    .map((d) => `<option value="${esc(d.key)}" ${sel === d.key ? 'selected' : ''}>${esc(d.key)} · ${esc(shortName(d.name))}</option>`).join('');
+  const trend = stats.overall.trend;
+
+  app().innerHTML = `
+    <section class="card">
+      <div class="card-head">
+        <h2>Performance</h2>
+        <div class="row">
+          <button class="btn btn-sm" id="perf-history" type="button">Test history</button>
+          ${back}
+        </div>
+      </div>
+      <div class="stat-line">
+        <div class="stat"><b>${attempts.length}</b><span>test${attempts.length === 1 ? '' : 's'} taken</span></div>
+        <div class="stat"><b>${stats.overall.total}</b><span>questions answered</span></div>
+        <div class="stat"><b>${stats.overall.accuracy}%</b><span>right overall</span></div>
+        <div class="stat"><b>${trend == null ? '–' : `${trend > 0 ? '+' : ''}${trend} pts`}</b><span>last ${RECENT_TESTS} tests vs earlier</span></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Where to focus next</h2>
+      ${focus[0]?.polish ? `<p class="muted small">You're at or above the ${PASS_MARK}% pass mark in every domain. This one has the most left to gain.</p>` : ''}
+      <ol class="focus-list">${focusItems}</ol>
+      <div class="focus-weights">
+        <div class="split"><span class="muted small" style="align-self:center">Recommended test weights:</span>${weightChips}</div>
+        <span class="spacer"></span>
+        <button class="btn btn-primary btn-sm" id="use-weights" type="button">Build a test with these weights</button>
+      </div>
+      <details>
+        <summary>How this is worked out</summary>
+        <p class="small">Each domain gets an estimated score from all your tests, with recent tests counting more: an answer ${RECENCY_HALF_LIFE} tests back counts half as much as one from your latest test. Domains and subtopics with only a few answers are pulled toward your overall average, so one lucky or unlucky question doesn't decide it.</p>
+        <p class="small">Domains are ranked by how much of the exam they're likely to cost you: exam weight × the share you'd currently get wrong. Subtopics are ranked the same way, using their share of the domain's questions in the bank. Anything estimated below the ${PASS_MARK}% pass mark, or not practised yet, is recommended. The recommended weights split a test in proportion to that ranking.</p>
+      </details>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <h2>Score per test</h2>
+        <select id="perf-domain" aria-label="Domain shown in the chart">
+          <option value="all" ${sel === 'all' ? 'selected' : ''}>All domains</option>
+          ${domainOptions}
+        </select>
+      </div>
+      ${trendChart(points, app().clientWidth - 40)}
+    </section>
+
+    <section class="card">
+      <h2>Domain by test</h2>
+      ${heatmap(stats)}
+    </section>
+
+    <section class="card">
+      <h2>By domain, all tests</h2>
+      <table class="domain-table perf-table">
+        <thead><tr><th>Domain</th><th class="num">Correct</th><th></th><th class="num">Score</th><th class="num" title="Points, last ${RECENT_TESTS} tests vs earlier">Trend</th><th class="num">Exam weight</th><th class="num">Status</th></tr></thead>
+        <tbody>${domainRows}</tbody>
+      </table>
+    </section>
+
+    <section class="card">
+      <h2>By subtopic</h2>
+      ${subtopicSections || '<div class="empty">No subtopics recorded yet.</div>'}
+    </section>`;
+
+  const toSetup = () => { saveSettings(); renderSetup(); window.scrollTo(0, 0); };
+  $('#perf-back').addEventListener('click', renderSetup);
+  $('#perf-history').addEventListener('click', renderHistory);
+  $('#perf-domain').addEventListener('change', (e) => { state.perfDomain = e.target.value; renderPerformance(); });
+  app().querySelectorAll('[data-drill]').forEach((b) => b.addEventListener('click', () => {
+    Object.assign(state.settings, { distribution: 'single', singleDomain: b.dataset.drill, priority: 'missed' });
+    toSetup();
+  }));
+  $('#use-weights').addEventListener('click', () => {
+    state.settings.distribution = 'custom';
+    state.settings.customWeights[state.exam.id] = { ...weights };
+    toSetup();
   });
   window.scrollTo(0, 0);
 }
