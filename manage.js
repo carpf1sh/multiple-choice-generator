@@ -773,6 +773,13 @@ async function uploadBatch(button) {
   }
 }
 
+const icon = (paths) => `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
+const ICONS = {
+  pencil: icon('<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>'),
+  trash: icon('<path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/>'),
+  eye: icon('<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>'),
+};
+
 function renderQuestionRows() {
   const { entries } = state.bank, f = state.filter;
   const text = f.text.trim().toLowerCase();
@@ -788,15 +795,15 @@ function renderQuestionRows() {
   const preview = (s) => (s.length > 160 ? `${s.slice(0, 157)}…` : s);
   el.innerHTML = `
     <table class="domain-table q-table">
-      <thead><tr><th>Question</th><th>Domain</th><th>Subtopic</th><th></th></tr></thead>
+      <thead><tr><th>Question</th><th>Domain</th><th class="q-subtopic">Subtopic</th><th class="q-actions"></th></tr></thead>
       <tbody>${shown.map(([e, i]) => `<tr>
         <td>${esc(preview(e.q.stem))}<div class="muted small">${esc(e.q.id)} · ${esc(e.file)}</div></td>
         <td><span class="dkey">${esc(e.q.domainKey)}</span></td>
-        <td>${esc(e.q.subtopic)}</td>
-        <td class="num nowrap">
-          <button class="btn btn-sm" type="button" data-edit="${i}">${state.writable ? 'Edit' : 'View'}</button>
-          ${state.writable ? `<button class="btn btn-sm" type="button" data-remove="${i}">Remove</button>` : ''}
-        </td>
+        <td class="q-subtopic">${esc(e.q.subtopic)}</td>
+        <td class="q-actions"><div class="q-action-stack">
+          <button class="btn btn-sm" type="button" data-edit="${i}">${state.writable ? `${ICONS.pencil}Edit` : `${ICONS.eye}View`}</button>
+          ${state.writable ? `<button class="btn btn-sm" type="button" data-remove="${i}">${ICONS.trash}Remove</button>` : ''}
+        </div></td>
       </tr>`).join('')}</tbody>
     </table>`;
   el.querySelectorAll('[data-edit]').forEach((b) => b.addEventListener('click', () => openEditor(entries[Number(b.dataset.edit)])));
