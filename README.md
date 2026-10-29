@@ -6,7 +6,7 @@ A local, browser-based multiple-choice practice test generator. It builds tests 
 
 - **Runs entirely on your machine.** No accounts, API keys, AI/LLM calls or internet access. Question selection is plain, deterministic JavaScript.
 - **No build step and no dependencies.** Plain HTML, CSS and JavaScript, served by Python's built-in web server.
-- **Comes with a test manager.** Create tests, add or remove questions and reword them in the browser; changes are saved straight to the JSON files.
+- **Comes with a test manager.** Create tests, upload new question batches, add or remove questions and reword them in the browser; changes are saved straight to the JSON files.
 - **Ships with two sample exams.** A 20-question *Computing Fundamentals* bank and a 16-question *Cloud Essentials* bank in [`samples/`](samples/) work out of the box and show how several exams sit side by side.
 
 **Try it online:** <https://carpf1sh.github.io/multiple-choice-generator/> runs the sample exams on GitHub Pages, published from `main` on every push. To use your own question banks or edit tests, run it locally.
@@ -120,6 +120,11 @@ Click **Manage tests** on the setup screen (or open `/manage.html`). Changes are
 - **Add a question**: domain, subtopic, objective, question text, 2–10 options with the correct one selected, an explanation, and an optional "why it's wrong" note per option. New questions get the next free id such as `SAMPLE-D2-011` and go into `<manifest name>_added.json` next to the manifest, which is created and added to the manifest the first time.
 - **Edit a question** to reword it or its answers, add or remove options, or change the correct answer. It's saved back into the batch file it came from, in the format shown under [Question format](#question-format). Alternative field names are rewritten to the standard ones, and fields the app doesn't use are kept.
 - **Remove a question** from its batch file.
+- **Upload questions**: pick a batch file (a JSON array of questions, or `{ "questions": [...] }`, in the [question format](#question-format)) and choose how to add it:
+  - *Appending*: saved as a new batch next to the manifest, named after the uploaded file (`Batch V7.json` → `batch_v7.json`, numbered if taken) and added to `batches`.
+  - *Replacing the bank*: saved the same way, but it becomes the only batch in the manifest. The batch files listed before stay on disk and are simply no longer listed, so you can add them back to the manifest by hand.
+
+  Before saving, the page shows how many questions are ready and lists each one it will skip and why: invalid questions, text longer than the question editor allows, a domain the test doesn't have, an id repeated in the file, or (when appending) an id already in the bank. Questions without an id get the bank's next free one. **Download JSON template** gives a starter file with one example per domain, using the test's domain names and next free ids.
 - Each save re-reads the batch file and manifest first, so changes made by a question generator since the page loaded aren't lost. The manifest's `item_count` and `total_questions` are kept up to date.
 - A question's domain comes from `-D<n>-` in its id when it has one, so the domain of such a question can't be changed here.
 - Rewording keeps a question's history. Changing its correct answer or its number of options means past tests that included it show it as changed and leave it out of retakes (see *Test history*).
@@ -147,7 +152,7 @@ Click **Manage tests** on the setup screen (or open `/manage.html`). Changes are
 ├── styles.css            All styling; light/dark themes via CSS custom properties
 ├── shared.js             Storage, escaping, theme, loading and validating questions (used by both pages)
 ├── app.js                Selection engine and UI for the practice screens
-├── manage.js             Test manager: creating tests and editing questions
+├── manage.js             Test manager: creating tests, editing questions and uploading batches
 ├── exams.json            Shared exam registry (committed)
 ├── exams.local.json      Optional private exam registry (git-ignored, you create it)
 ├── start.bat             Windows launcher; runs the local server in the background
@@ -229,7 +234,7 @@ The manifest lists the batch files in an exam's bank. Your question generator ow
 - `file_name` is resolved **relative to the manifest's folder**.
 - Other fields (`item_count`, `covered_subtopics`, `target_subtopics_for_next_batches`, …) are ignored by the app, so the generator can keep whatever bookkeeping it needs there.
 
-**Adding questions:** write a new batch file next to the manifest, append it to `batches`, then refresh the browser or click **Reload bank**. All files are fetched with `cache: no-store`, so you never see stale data.
+**Adding questions:** upload the batch from the test manager (see *Managing tests*), or write a new batch file next to the manifest yourself, append it to `batches`, then refresh the browser or click **Reload bank**. All files are fetched with `cache: no-store`, so you never see stale data.
 
 ### Question format
 
@@ -303,7 +308,7 @@ init()
 | `interleave`, `pickFromDomain` | Selection engine | Round-robin across objectives and subtopics |
 | `renderSetup`, `renderTest`, `renderResults` | Screens | Render each screen and bind its events |
 | `store` | Storage (`shared.js`) | `localStorage` wrapper that never throws, so the app still works when storage is blocked |
-| `toRawQuestion`, `upsertQuestion`, `removeQuestion`, `updateManifestCounts`, `newExamFiles` | `manage.js` | Turn the editor's changes into updated batch, manifest and registry files |
+| `toRawQuestion`, `upsertQuestion`, `removeQuestion`, `updateManifestCounts`, `newExamFiles`, `checkUpload`, `uploadManifest` | `manage.js` | Turn the editor's changes into updated batch, manifest and registry files |
 
 **State:** one in-memory `state` object holds the loaded exams, the normalised questions, settings, history and the current test. Settings and history are kept in sync with `localStorage`; a test in progress is not saved.
 
@@ -367,7 +372,7 @@ python -m unittest discover -s tests
 | File | Covers |
 |---|---|
 | `tests/app.test.js` | Question validation and escaping, the largest-remainder split and shortfall redistribution, history priority, subtopic round-robin, answer shuffling, and saving and restoring test history. `tests/load-app.js` loads `shared.js` and `app.js` (or `manage.js`) unchanged into a minimal fake browser. |
-| `tests/manage.test.js` | The test manager's file changes: questions built from the editor pass validation and keep unknown fields, batch files keep their shape, ids continue the numbering, manifest counts stay right, and new tests produce valid registry, manifest and batch files. |
+| `tests/manage.test.js` | The test manager's file changes: questions built from the editor pass validation and keep unknown fields, batch files keep their shape, ids continue the numbering, manifest counts stay right, new tests produce valid registry, manifest and batch files, and uploads skip invalid, unknown-domain and duplicate questions, name batches safely, and append to or replace the manifest's batches. |
 | `tests/repo.test.js` | Every exam in `exams.json` and every question in its bank is valid, has a unique id and a known domain. The app references no external hosts. |
 | `tests/test_server.py` | `server.pyw` refuses foreign `Host` headers, never serves dotfiles (including encoded paths), doesn't list folders, and stays inside its folder. Saving works in the allowed places and is refused for foreign hosts or origins, wrong content types, oversized bodies, traversal, dotfiles, non-JSON files and other folders, without writing anything. |
 

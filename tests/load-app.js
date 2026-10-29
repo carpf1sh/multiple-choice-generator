@@ -22,6 +22,7 @@ const MANAGE_EXPORTS = [
   'normalize', 'domainKeyFor', 'slugify', 'nextQuestionId', 'toRawQuestion', 'questionsOf', 'withQuestions',
   'findQuestion', 'upsertQuestion', 'removeQuestion', 'countQuestions', 'updateManifestCounts', 'addedBatchName',
   'validateNewTest', 'newExamFiles', 'validateQuestion', 'LIMITS',
+  'uploadTemplate', 'checkUpload', 'uploadBatchName', 'uploadManifest',
 ];
 
 function fakeElement() {
