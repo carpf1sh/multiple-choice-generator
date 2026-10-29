@@ -308,6 +308,13 @@ function newExamFiles(t, registry, upload = null) {
   };
 }
 
+// The registry without the exam with this id, in its existing shape. Its
+// manifest and batch files are left on disk.
+function removeExam(registry, id) {
+  if (Array.isArray(registry)) return registry.filter((e) => !e || e.id !== id);
+  return { ...registry, exams: ((registry && registry.exams) || []).filter((e) => !e || e.id !== id) };
+}
+
 function validateQuestion(form, exam, ids) {
   if (!exam.domains.some((d) => d.key === form.domainKey)) return `Domain ${form.domainKey} isn't registered for this test.`;
   if (!form.stem.trim()) return 'Enter the question text.';
@@ -448,7 +455,10 @@ function renderList() {
       <td>${e.source === 'local' ? 'Private' : 'Shared'}</td>
       <td class="num">${e.domains.length}</td>
       <td class="num">${state.banks[e.id]?.entries.length ?? '–'}</td>
-      <td class="num"><button class="btn btn-sm" type="button" data-open="${esc(e.id)}">Open</button></td>
+      <td class="num"><div class="q-action-stack">
+        <button class="btn btn-sm" type="button" data-open="${esc(e.id)}">Open</button>
+        ${state.writable ? `<button class="btn btn-sm" type="button" data-delete="${esc(e.id)}">${ICONS.trash}Delete</button>` : ''}
+      </div></td>
     </tr>`).join('');
 
   app().innerHTML = `
@@ -475,7 +485,32 @@ function renderList() {
     state.filter = { domain: '', text: '' };
     renderExam();
   }));
+  app().querySelectorAll('[data-delete]').forEach((b) => b.addEventListener('click', () => {
+    deleteExam(state.exams.find((e) => e.id === b.dataset.delete), b);
+  }));
   window.scrollTo(0, 0);
+}
+
+async function deleteExam(exam, button) {
+  const registryPath = exam.source === 'local' ? 'exams.local.json' : 'exams.json';
+  if (!confirm(`Delete the test "${exam.name}"? It's removed from ${registryPath}. Its question files stay on disk `
+    + `(${dirOf(exam.manifest) || 'the project folder'}), so you can add it back to ${registryPath} by hand.`)) return;
+  button.disabled = true;
+  try {
+    const registry = await fetchJson(registryPath);
+    const next = removeExam(registry, exam.id);
+    if (examList(next).length === examList(registry).length) throw new Error(`${exam.id} isn't in ${registryPath}.`);
+    await saveFiles([{ path: registryPath, data: next }]);
+    delete state.banks[exam.id];
+    state.exams = await fetchExams();
+    await Promise.all(state.exams.filter((e) => !state.banks[e.id]).map(async (e) => { state.banks[e.id] = await loadBank(e); }));
+    state.bank = null;
+    state.flash = `Deleted ${exam.name}.`;
+    renderList();
+  } catch (e) {
+    alert(`Couldn't delete the test: ${e.message}`);
+    button.disabled = false;
+  }
 }
 
 /* ---------- New test ---------- */
@@ -657,6 +692,7 @@ function renderExam() {
           <button class="btn btn-sm" id="to-list" type="button">← All tests</button>
           <button class="btn btn-sm" id="upload" type="button" ${exam.domains.length ? '' : 'disabled'}>Upload questions</button>
           <button class="btn btn-primary btn-sm" id="add-question" type="button" ${state.writable && exam.domains.length ? '' : 'disabled'}>+ Add question</button>
+          ${state.writable ? `<button class="btn btn-sm" id="delete-test" type="button">${ICONS.trash}Delete test</button>` : ''}
         </div>
       </div>
       <div class="stat-line">
@@ -685,6 +721,7 @@ function renderExam() {
   $('#f-text').addEventListener('input', (e) => { f.text = e.target.value; renderQuestionRows(); });
   $('#to-list').addEventListener('click', renderList);
   $('#add-question').addEventListener('click', () => openEditor(null));
+  $('#delete-test')?.addEventListener('click', (e) => deleteExam(exam, e.currentTarget));
   $('#upload').addEventListener('click', () => {
     state.upload = { mode: 'append', fileName: '', data: null, result: null, error: '' };
     renderUpload();

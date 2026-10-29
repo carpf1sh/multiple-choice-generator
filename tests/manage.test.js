@@ -231,6 +231,15 @@ test('newExamFiles starts the test with an uploaded batch when given one', () =>
   assert.deepEqual(plain(questions.map((q) => q.id)), ['NET-BASICS-D1-001', 'NET-BASICS-D2-001']);
 });
 
+test('removeExam drops one test and keeps the registry shape', () => {
+  const registry = readJson('exams.json');
+  const next = plain(m.removeExam(registry, 'sample'));
+  assert.deepEqual(next.exams.map((e) => e.id), registry.exams.filter((e) => e.id !== 'sample').map((e) => e.id));
+  assert.equal(loadApp().examList(next).length, registry.exams.length - 1);
+  assert.deepEqual(plain(m.removeExam([{ id: 'a' }, { id: 'b' }], 'a')), [{ id: 'b' }], 'bare-array registry stays an array');
+  assert.deepEqual(plain(m.removeExam(registry, 'missing').exams).length, registry.exams.length);
+});
+
 /* ---------- Uploading batches ---------- */
 
 const sampleExam = () => readJson('exams.json').exams.find((e) => e.id === 'sample');
