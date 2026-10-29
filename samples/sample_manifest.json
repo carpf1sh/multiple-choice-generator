@@ -1,6 +1,6 @@
 {
   "manifest_version": "1.0",
-  "total_questions": 20,
+  "total_questions": 32,
   "batches": [
     {
       "batch_id": "v1",
@@ -35,12 +35,28 @@
         "Domain 4: Normalization",
         "Domain 4: Transactions (ACID)"
       ]
+    },
+    {
+      "batch_id": "v3",
+      "file_name": "sample_bank_v3.json",
+      "item_count": 12,
+      "covered_subtopics": [
+        "Domain 1: Routing Protocols",
+        "Domain 1: Network Address Translation",
+        "Domain 1: DNS Record Types",
+        "Domain 2: Public Key Infrastructure",
+        "Domain 2: Social Engineering",
+        "Domain 3: Object-Oriented Design",
+        "Domain 3: Algorithmic Complexity",
+        "Domain 4: Indexing",
+        "Domain 4: SQL Joins"
+      ]
     }
   ],
   "target_subtopics_for_next_batches": [
-    "Domain 1: Routing Protocols",
-    "Domain 2: Public Key Infrastructure",
-    "Domain 3: Object-Oriented Design",
-    "Domain 4: Indexing"
+    "Domain 1: Wireless Networking",
+    "Domain 2: Incident Response",
+    "Domain 3: Software Testing",
+    "Domain 4: NoSQL Databases"
   ]
 }

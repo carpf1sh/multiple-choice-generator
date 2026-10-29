@@ -7,9 +7,9 @@ A local, browser-based multiple-choice practice test generator. It builds tests 
 - **Runs entirely on your machine.** No accounts, API keys, AI/LLM calls or internet access. Question selection is plain, deterministic JavaScript.
 - **No build step and no dependencies.** Plain HTML, CSS and JavaScript, served by Python's built-in web server.
 - **Comes with a test manager.** Create tests, upload new question batches, add or remove questions and reword them in the browser; changes are saved straight to the JSON files.
-- **Ships with two sample exams.** A 20-question *Computing Fundamentals* bank and a 16-question *Cloud Essentials* bank in [`samples/`](samples/) work out of the box and show how several exams sit side by side.
+- **Ships with two sample exams.** A 32-question *Computing Fundamentals* bank and a 25-question *Cloud Essentials* bank in [`samples/`](samples/) work out of the box and show how several exams sit side by side. Each comes with made-up test history you can load to try **Test history** and **Performance** without taking tests first.
 
-**Try it online:** <https://carpf1sh.github.io/multiple-choice-generator/> runs the sample exams on GitHub Pages, published from `main` on every push. To use your own question banks or edit tests, run it locally.
+**Try it online:** <https://carpf1sh.github.io/multiple-choice-generator/> runs the sample exams on GitHub Pages, published from `main` on every push. Click **Load demo history** on the setup screen to fill in a few weeks of practice tests and explore the performance screens. To use your own question banks or edit tests, run it locally.
 
 ---
 
@@ -125,6 +125,13 @@ How the recommendations are worked out:
 
 Tests saved before this feature didn't record subtopics; their answers are matched to each question's current subtopic in the bank.
 
+**Demo history.** An exam can ship a file of made-up finished tests (`demoHistory` in the [registry](#exam-registry-examsjson)). While the exam has no tests of its own, the setup, Test history and Performance screens offer **Load demo history**, which adds them as if you'd taken them, with dates moved so the latest finished an hour ago. They also count toward *Prefer unseen* and *Focus on missed*. **Clear test history** removes them again (and **Reset history** clears their effect on question selection). The sample exams' files are written by `node tools/demo-history.js` from a learner profile per exam:
+
+- *Computing Fundamentals*: 18 tests over six weeks. Networking improves steadily, Security stays strong, Programming slips and Databases stays below the pass mark, with *Indexing* never practised, so every status, trend and recommendation shows up.
+- *Cloud Essentials*: 10 tests over three weeks, passing in every domain, which shows the "most left to gain" view.
+
+Re-run the script after changing a sample bank; the tests check that each demo file still matches its bank.
+
 **Managing tests**
 
 Click **Manage tests** on the setup screen (or open `/manage.html`). Changes are written to the JSON files on disk through the local server, so the online copy can only browse.
@@ -178,14 +185,19 @@ Click **Manage tests** on the setup screen (or open `/manage.html`). Changes are
 ├── stop.bat              Stops the background server
 ├── server.pyw            Windowless local server used by start.bat; also saves the test manager's changes
 ├── tests/                Node and Python tests (see Testing)
+├── tools/demo-history.js Writes the sample exams' demo test history (not part of the site)
 ├── .github/              CI, CodeQL, Pages deployment and Dependabot configuration
 └── samples/
     ├── sample_manifest.json
     ├── sample_bank_v1.json
     ├── sample_bank_v2.json
+    ├── sample_bank_v3.json
+    ├── sample_demo_history.json
     ├── cloud_manifest.json
     ├── cloud_bank_v1.json
-    └── cloud_bank_v2.json
+    ├── cloud_bank_v2.json
+    ├── cloud_bank_v3.json
+    └── cloud_demo_history.json
 ```
 
 There's no framework. Each page renders its screens (**Setup → Test → Results** in the app; **Tests → Questions → Editor** in the manager) by building HTML strings and escaping all question text before inserting it.
@@ -229,6 +241,7 @@ exams.json / exams.local.json     which exams exist, their domains and weights
 | `name` | yes | Name shown in the exam picker. |
 | `title` | no | Page and header title. Defaults to `"<name> Practice Test"`. |
 | `manifest` | yes | Path to the manifest, relative to the project root. |
+| `demoHistory` | no | Path to a JSON array of finished tests in the `mcq.attempts` format (see [Data storage](#data-storage-and-privacy)), offered as **Load demo history** while the exam has no tests. |
 | `domains[].key` | yes | Domain key such as `D1`. Questions are matched to domains by this key. |
 | `domains[].name` | yes | Display name. |
 | `domains[].weight` | yes | Relative weight. Weights don't need to add up to 100. |
@@ -393,7 +406,7 @@ python -m unittest discover -s tests
 |---|---|
 | `tests/app.test.js` | Question validation and escaping, the largest-remainder split and shortfall redistribution, history priority, subtopic round-robin, answer shuffling, saving and restoring test history, and performance stats and focus recommendations. `tests/load-app.js` loads `shared.js` and `app.js` (or `manage.js`) unchanged into a minimal fake browser. |
 | `tests/manage.test.js` | The test manager's file changes: questions built from the editor pass validation and keep unknown fields, batch files keep their shape, ids continue the numbering, manifest counts stay right, new tests produce valid registry, manifest and batch files, and uploads skip invalid, unknown-domain and duplicate questions, name batches safely, and append to or replace the manifest's batches. |
-| `tests/repo.test.js` | Every exam in `exams.json` and every question in its bank is valid, has a unique id and a known domain. The app references no external hosts. |
+| `tests/repo.test.js` | Every exam in `exams.json` and every question in its bank is valid, has a unique id and a known domain. Each demo history matches its bank (ids, answers, subtopics, option orders) and is in date order. The app references no external hosts, and the Pages site publishes every file the pages load. |
 | `tests/test_server.py` | `server.pyw` refuses foreign `Host` headers, never serves dotfiles (including encoded paths), doesn't list folders, and stays inside its folder. Saving works in the allowed places and is refused for foreign hosts or origins, wrong content types, oversized bodies, traversal, dotfiles, non-JSON files and other folders, without writing anything. |
 
 **Automation** (GitHub Actions, in `.github/`):

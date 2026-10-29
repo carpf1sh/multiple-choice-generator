@@ -5,6 +5,7 @@
       "name": "Computing Fundamentals (Sample)",
       "title": "Computing Fundamentals Practice Test",
       "manifest": "samples/sample_manifest.json",
+      "demoHistory": "samples/sample_demo_history.json",
       "domains": [
         { "key": "D1", "name": "Networking", "weight": 30 },
         { "key": "D2", "name": "Security", "weight": 25 },
@@ -17,6 +18,7 @@
       "name": "Cloud Essentials (Sample)",
       "title": "Cloud Essentials Practice Test",
       "manifest": "samples/cloud_manifest.json",
+      "demoHistory": "samples/cloud_demo_history.json",
       "domains": [
         { "key": "D1", "name": "Cloud Concepts", "weight": 40 },
         { "key": "D2", "name": "Security and Compliance", "weight": 30 },

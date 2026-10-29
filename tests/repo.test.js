@@ -86,3 +86,33 @@ test('the Pages site publishes every page, script and stylesheet the pages load'
     }
   }
 });
+
+for (const exam of exams.filter((e) => e.demoHistory)) {
+  test(`the "${exam.id}" demo history matches its bank`, () => {
+    const manifest = readJson(exam.manifest);
+    const dir = path.posix.dirname(exam.manifest);
+    const bank = new Map();
+    for (const b of manifest.batches) {
+      const data = readJson(path.posix.join(dir, b.file_name));
+      (Array.isArray(data) ? data : data.questions).forEach((item, i) => {
+        const q = app.normalize(item, b.file_name, i);
+        bank.set(q.id, q);
+      });
+    }
+    const attempts = readJson(exam.demoHistory);
+    assert.ok(Array.isArray(attempts) && attempts.length, 'no demo tests');
+    let last = 0;
+    for (const a of attempts) {
+      assert.ok(['new', 'retake', 'missed'].includes(a.kind), `unknown kind ${a.kind}`);
+      assert.ok(a.startedAt <= a.endedAt && a.endedAt > last, 'dates out of order');
+      last = a.endedAt;
+      for (const r of a.questions) {
+        const q = bank.get(r.id);
+        assert.ok(q, `${r.id} isn't in the bank`);
+        assert.deepEqual([r.domain, r.subtopic, r.answer], [q.domainKey, q.subtopic, q.answer], r.id);
+        assert.ok(r.chosen == null || q.letters.includes(r.chosen), `${r.id}: chose ${r.chosen}`);
+        assert.deepEqual([...r.order].sort(), [...q.letters], `${r.id}: option order`);
+      }
+    }
+  });
+}
