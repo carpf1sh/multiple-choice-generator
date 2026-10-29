@@ -455,9 +455,9 @@ function renderList() {
       <td>${e.source === 'local' ? 'Private' : 'Shared'}</td>
       <td class="num">${e.domains.length}</td>
       <td class="num">${state.banks[e.id]?.entries.length ?? '–'}</td>
-      <td class="num"><div class="q-action-stack">
-        <button class="btn btn-sm" type="button" data-open="${esc(e.id)}">Open</button>
-        ${state.writable ? `<button class="btn btn-sm" type="button" data-delete="${esc(e.id)}">${ICONS.trash}Delete</button>` : ''}
+      <td class="row-actions"><div>
+        <button class="btn btn-xs" type="button" data-open="${esc(e.id)}">Open</button>
+        ${state.writable ? `<button class="btn btn-xs" type="button" data-delete="${esc(e.id)}">${ICONS.trash}Delete</button>` : ''}
       </div></td>
     </tr>`).join('');
 
