@@ -263,6 +263,91 @@ test('recordAttempt keeps only the most recent attempts', () => {
   assert.equal(app.state.attempts.at(-1).examId, 'sample');
 });
 
+test('attemptRecord stores each question\'s subtopic', () => {
+  const base = app.normalize(raw(), 'f', 0);
+  const rec = app.attemptRecord(finished([base], ['B']), 'sample');
+  assert.equal(rec.questions[0].subtopic, 'OSI');
+});
+
+/* ---------- Performance ---------- */
+
+const DOMAINS = [
+  { key: 'D1', name: 'Networking', weight: 60 },
+  { key: 'D2', name: 'Security', weight: 40 },
+  { key: 'D3', name: 'Databases', weight: 0 },
+];
+const bankQ = (id, domainKey, subtopic) => ({ id, domainKey, subtopic });
+const BANK = [
+  bankQ('D1-1', 'D1', 'OSI'), bankQ('D1-2', 'D1', 'OSI'), bankQ('D1-3', 'D1', 'Routing'),
+  bankQ('D2-1', 'D2', 'Crypto'), bankQ('D2-2', 'D2', 'Auth'),
+];
+// rows: [id, domain, right?, subtopic?]
+const attempt = (rows, endedAt = 1) => ({
+  examId: 'x', kind: 'new', endedAt,
+  questions: rows.map(([id, domain, right, subtopic]) => ({ id, domain, chosen: right ? 'A' : 'B', answer: 'A', ...(subtopic ? { subtopic } : {}) })),
+});
+
+test('performanceStats totals each domain and subtopic, falling back to the bank for old records', () => {
+  const stats = app.performanceStats([
+    attempt([['D1-1', 'D1', true, 'OSI'], ['D1-3', 'D1', false], ['D2-1', 'D2', false]]),
+    attempt([['D1-2', 'D1', true, 'osi '], ['D2-2', 'D2', true, 'Auth']], 2),
+  ], BANK, DOMAINS);
+  const d1 = stats.domains.find((d) => d.key === 'D1');
+  assert.deepEqual([d1.correct, d1.total, d1.accuracy, d1.bank], [2, 3, 67, 3]);
+  const osi = d1.subtopics.find((s) => s.name === 'OSI');
+  assert.deepEqual([osi.correct, osi.total, osi.bank], [2, 2, 2]);
+  assert.equal(d1.subtopics.find((s) => s.name === 'Routing').total, 1);
+  assert.equal(stats.tests.length, 2);
+  assert.deepEqual(plain(stats.tests[0].byDomain), { D1: { correct: 1, total: 2 }, D2: { correct: 0, total: 1 } });
+  assert.equal(stats.tests[1].score, 100);
+  assert.deepEqual([stats.overall.correct, stats.overall.total], [3, 5]);
+  assert.equal(stats.domains.find((d) => d.key === 'D3').status, 'unpractised');
+});
+
+test('performanceStats weights recent tests more and pulls thin estimates toward the average', () => {
+  const old = Array.from({ length: 10 }, (_, i) => attempt([['D1-1', 'D1', false], ['D2-1', 'D2', true]], i));
+  const recent = Array.from({ length: 3 }, (_, i) => attempt([['D1-1', 'D1', true], ['D2-1', 'D2', true]], 20 + i));
+  const d1 = app.performanceStats([...old, ...recent], BANK, DOMAINS).domains[0];
+  assert.equal(d1.accuracy, 23);        // 3 of 13, unweighted
+  assert.ok(d1.mastery > 0.4);          // recent right answers count for more
+  assert.equal(d1.trend, 100);          // last 3 tests all right, earlier all wrong
+
+  const single = app.performanceStats([attempt([['D1-1', 'D1', false], ['D2-1', 'D2', true], ['D2-2', 'D2', true]])], BANK, DOMAINS);
+  const one = single.domains[0];
+  assert.equal(one.accuracy, 0);
+  assert.ok(one.mastery > 0.4 && one.mastery < 0.67);  // one miss isn't read as 0%
+  assert.equal(one.trend, null);
+});
+
+test('recommendations rank weak domains by what they cost on the exam', () => {
+  const rows = [
+    ['D1-1', 'D1', false, 'OSI'], ['D1-2', 'D1', false, 'OSI'], ['D1-3', 'D1', true, 'Routing'],
+    ['D2-1', 'D2', false, 'Crypto'], ['D2-2', 'D2', false, 'Auth'],
+  ];
+  const stats = app.performanceStats([attempt(rows, 1), attempt(rows, 2), attempt(rows, 3)], BANK, DOMAINS);
+  const { focus, weights } = app.recommendations(stats);
+  assert.deepEqual(plain(focus.map((d) => d.key)), ['D1', 'D2']);  // D2 is weaker, but D1 is worth more of the exam
+  assert.equal(focus[0].subtopics[0].name, 'OSI');
+  assert.ok(focus[0].subtopics.every((s) => s.name !== 'Routing'));
+  assert.equal(weights.D1 + weights.D2, 100);
+  assert.ok(weights.D1 > weights.D2);
+  assert.equal(weights.D3, undefined);  // no questions and no answers
+});
+
+test('recommendations still name a domain when every domain passes', () => {
+  const rows = [['D1-1', 'D1', true], ['D2-1', 'D2', true], ['D2-2', 'D2', true]];
+  const stats = app.performanceStats(Array.from({ length: 6 }, (_, i) => attempt(rows, i)), BANK, DOMAINS);
+  const { focus } = app.recommendations(stats);
+  assert.equal(focus.length, 1);
+  assert.equal(focus[0].polish, true);
+  assert.equal(focus[0].key, 'D1');
+});
+
+test('performanceStats ignores answers from domains no longer in the exam', () => {
+  const stats = app.performanceStats([attempt([['D9-1', 'D9', false], ['D1-1', 'D1', true]])], BANK, DOMAINS);
+  assert.equal(stats.overall.total, 1);
+});
+
 /* ---------- Priority and picking ---------- */
 
 test('prefer-unseen ranks fewer views, then older views, first', () => {
