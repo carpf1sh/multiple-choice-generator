@@ -12,7 +12,7 @@ const MIN_OPTIONS = 2;
 // Longest accepted text, in characters, for each field.
 const LIMITS = {
   id: 40, name: 100, title: 120, domainName: 100, domains: 20, weight: 1000,
-  stem: 5000, option: 1000, note: 2000, explanation: 5000, subtopic: 100, objective: 20,
+  stem: 5000, option: 1000, note: 2000, explanation: 5000, subtopic: 500, objective: 20,
 };
 
 const state = {
