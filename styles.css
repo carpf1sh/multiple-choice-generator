@@ -123,6 +123,17 @@ p { margin: 0 0 .75rem; }
 label.field { display: block; font-weight: 600; margin-bottom: .35rem; }
 .field-help { color: var(--muted); font-size: .85rem; margin-top: .3rem; }
 
+.dropzone {
+  display: flex; flex-direction: column; align-items: center; gap: .2rem; text-align: center;
+  padding: 1.4rem 1rem; border: 2px dashed var(--border); border-radius: var(--radius);
+  background: var(--surface-2); cursor: pointer; transition: border-color .15s, background .15s;
+}
+.dropzone input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.dropzone:hover, .dropzone.is-over { border-color: var(--accent); background: var(--accent-soft); }
+.dropzone:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.dropzone.is-disabled { cursor: not-allowed; opacity: .6; }
+.dropzone.is-disabled:hover { border-color: var(--border); background: var(--surface-2); }
+
 input[type="number"], select {
   font: inherit; color: var(--text); background: var(--surface);
   border: 1px solid var(--border); border-radius: 8px; padding: .45rem .6rem;
